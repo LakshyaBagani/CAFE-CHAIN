@@ -13,7 +13,7 @@ const generateToken = async (UserId:number,res:Response) : Promise<string> =>{
         maxAge: 15 * 24 * 60 * 60 * 1000,
 		httpOnly: true,
 		sameSite: "lax", 
-		secure: false,
+		secure: true,
     })
     return token;
 }
