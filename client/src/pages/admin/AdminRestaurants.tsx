@@ -171,10 +171,7 @@ const AdminRestaurants: React.FC = () => {
     }
   };
 
-  const handleAddMenu = (restaurant: Restaurant) => {
-    setSelectedRestaurant(restaurant);
-    setShowAddMenuModal(true);
-  };
+
 
   const handleAddMenuItem = async () => {
     if (!selectedRestaurant || !selectedImage) {

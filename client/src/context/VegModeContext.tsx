@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 
 interface VegModeContextType {
   vegMode: boolean;
@@ -15,11 +15,9 @@ export const useVegMode = () => {
   return context;
 };
 
-interface VegModeProviderProps {
-  children: ReactNode;
-}
 
-export const VegModeProvider: React.FC<VegModeProviderProps> = ({ children }) => {
+
+export const VegModeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [vegMode, setVegMode] = useState(false);
 
   return (

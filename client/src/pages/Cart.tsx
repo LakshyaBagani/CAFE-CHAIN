@@ -6,7 +6,6 @@ import {
   Minus, 
   Trash2, 
   ShoppingBag, 
-  CreditCard,
   ArrowLeft,
   CheckCircle,
   MapPin,
@@ -17,7 +16,6 @@ import {
 const Cart: React.FC = () => {
   const { items, updateQuantity, removeItem, clearCart, getTotalPrice, getTotalItems } = useCart();
   const navigate = useNavigate();
-  const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [checkoutStep, setCheckoutStep] = useState(1);
   const [deliveryType, setDeliveryType] = useState('');
   const [showDeliveryDropdown, setShowDeliveryDropdown] = useState(false);
@@ -339,7 +337,6 @@ const Cart: React.FC = () => {
                           onClick={() => {
                             setDeliveryType('takeaway');
                             setShowDeliveryDropdown(false);
-                            setRoomNumber('');
                           }}
                           className="w-full flex items-center space-x-2 px-3 py-2 text-left hover:bg-gray-50"
                         >

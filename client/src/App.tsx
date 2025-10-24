@@ -18,13 +18,12 @@ import OrderTracking from './pages/OrderTracking';
 import SingleOrderTracking from './pages/SingleOrderTracking';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminRestaurants from './pages/admin/AdminRestaurants';
-import AdminOrders from './pages/admin/AdminOrders';
 import AdminAnalytics from './pages/admin/AdminAnalytics';
   import RestaurantMenu from './pages/admin/RestaurantMenu';
   import RestaurantAnalytics from './pages/admin/RestaurantAnalytics';
 import RestaurantOrders from './pages/admin/RestaurantOrders';
 import AdminDeliveredOrders from './pages/admin/AdminDeliveredOrders';
-import { HomePageSkeleton, AdminPageSkeleton, LoginPageSkeleton } from './components/SkeletonLoader';
+import { HomePageSkeleton } from './components/SkeletonLoader';
 import AdminNavigation from './components/AdminNavigation';
 
 function App() {

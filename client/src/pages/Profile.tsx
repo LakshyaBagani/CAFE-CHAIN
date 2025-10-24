@@ -6,7 +6,6 @@ import {
   User,
   Mail,
   Phone,
-  MapPin,
   Clock,
   LogOut,
   Package,
@@ -70,6 +69,7 @@ const Profile: React.FC = () => {
         setRetryCount(0);
         // Use cached user info only; do not call userInfo API here
         await Promise.all([useCachedUserInfo(), fetchOrders()]);
+        console.log(retryCount);
       } catch (error) {
         console.error('Failed to load profile data:', error);
       }
@@ -443,7 +443,7 @@ const Profile: React.FC = () => {
           ) : processedOrders.length > 0 ? (
             <div className="space-y-4">
               {processedOrders.map((order: any) => {
-                const orderDate = new Date(order.createdAt).toLocaleDateString('en-US', {
+                new Date(order.createdAt).toLocaleDateString('en-US', {
                   year: 'numeric',
                   month: 'long',
                   day: 'numeric',

@@ -11,7 +11,6 @@ import {
   ShoppingCart, 
   User, 
   Search,
-  Bell,
   Settings,
   MapPin,
   Wallet,

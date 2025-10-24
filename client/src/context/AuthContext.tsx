@@ -8,6 +8,7 @@ interface User {
   email: string;
   number: string;
   isVerify: boolean;
+  isAdmin?: boolean;
 }
 
 interface AuthContextType {
@@ -136,14 +137,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signup = async (name: string, email: string, password: string, number: string) => {
     try {
-      const response = await axios.post('https://cafe-chain.onrender.com/auth/signup', { name, email, password, number }, {
+      await axios.post('https://cafe-chain.onrender.com/auth/signup', { name, email, password, number }, {
         headers: {
           'Content-Type': 'application/json',
         },
         withCredentials: true
       });
 
-      const data = response.data;
       // Don't set user immediately, let them verify email first
     } catch (error: any) {
       throw error;

@@ -42,7 +42,7 @@ const Home: React.FC = () => {
   const { selectedLocation, setSelectedLocation } = useLocation();
   const { vegMode, setVegMode } = useVegMode();
   const { addItem, removeItem, updateQuantity, items: cartItems, setCurrentRestaurant } = useCart();
-  const { selectedCafe, setSelectedCafe, userHasSelectedCafe, setUserHasSelectedCafe, isInitialized } = useCafe();
+  const { selectedCafe, setSelectedCafe, userHasSelectedCafe, isInitialized } = useCafe();
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [trendingMenus, setTrendingMenus] = useState<MenuItem[]>([]);
   const [allMenuItems, setAllMenuItems] = useState<MenuItem[]>([]);
@@ -81,7 +81,7 @@ const Home: React.FC = () => {
     
     // Filter out categories with no items
     const categoriesWithItems = Object.entries(grouped)
-      .filter(([category, items]) => items.length > 0)
+      .filter(([items]) => items.length > 0)
       .reduce((acc, [category, items]) => {
         acc[category] = items;
         return acc;
@@ -122,6 +122,8 @@ const Home: React.FC = () => {
         // Only switch if user hasn't made a selection yet
         if (!userHasSelectedCafe) {
           console.log('Setting initial restaurant from URL:', restaurant.name);
+          console.log(selectedCafe);
+          
           setSelectedLocation({
             id: restaurant.id,
             name: restaurant.name,
