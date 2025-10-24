@@ -1,0 +1,88 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model user {
+  id       Int     @id @default(autoincrement())
+  name     String
+  email    String  @unique
+  password String
+  number   BigInt  @unique
+  OTPCode  String?
+  isVerify Boolean @default(false)
+  orders   order[]
+  balance  Int     @default(0)
+}
+
+model userWallet {
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  amount        Int      @default(0)
+  modeOfPayment String
+  createdAt     DateTime @default(now())
+}
+
+model resto {
+  id          Int     @id @default(autoincrement())
+  name        String
+  location    String
+  number      String  @unique
+  email       String  @unique
+  password    String
+  open        Boolean @default(true)
+  menuVersion Int     @default(1)
+  menus       menu[]
+  ads         ads[]
+}
+
+model menu {
+  id           Int         @id @default(autoincrement())
+  name         String
+  price        Int
+  description  String
+  imageUrl     String
+  restoId      Int
+  veg          Boolean
+  category     String
+  availability Boolean     @default(true)
+  resto        resto       @relation(fields: [restoId], references: [id])
+  orderItems   orderItem[]
+  ads          ads[]
+}
+
+model orderItem {
+  id       Int   @id @default(autoincrement())
+  orderId  Int
+  order    order @relation(fields: [orderId], references: [id])
+  menuId   Int
+  menu     menu  @relation(fields: [menuId], references: [id])
+  quantity Int
+}
+
+model order {
+  id            Int         @id @default(autoincrement())
+  userId        Int
+  totalPrice    Int
+  status        String      @default("Pending")
+  orderItems    orderItem[]
+  user          user        @relation(fields: [userId], references: [id])
+  paymentMethod String
+  deliveryType  String
+  createdAt     DateTime    @default(now())
+}
+
+model ads {
+  id       Int     @id @default(autoincrement())
+  restoId  Int
+  resto    resto   @relation(fields: [restoId], references: [id])
+  valid    Boolean @default(true)
+  menuId   Int
+  discount Int
+  menu     menu    @relation(fields: [menuId], references: [id])
+}

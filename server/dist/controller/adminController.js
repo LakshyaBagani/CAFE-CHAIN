@@ -1,0 +1,606 @@
+"use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.getDashboardStats = exports.deleteMenu = exports.editMenu = exports.changeOrderStatus = exports.resoStatus = exports.getMenuVersion = exports.changeMenuStatus = exports.deleteAds = exports.getAds = exports.runAds = exports.deliveredOrdersForDay = exports.restoOrderHistory = exports.getDailyRevenue = exports.addMenu = exports.allResto = exports.createResto = void 0;
+const db_1 = __importDefault(require("../config/db"));
+const supabaseConfig_1 = require("../config/supabaseConfig");
+const bcrypt_1 = __importDefault(require("bcrypt"));
+const path_1 = __importDefault(require("path"));
+const createResto = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { name, location, number } = req.body;
+    try {
+        const email = `${number}@gmail.com`;
+        const password = `${number}@payment`;
+        const salt = yield bcrypt_1.default.genSalt(10);
+        const hashedPassword = yield bcrypt_1.default.hash(password, salt);
+        if (!name || !location || !number) {
+            return res
+                .status(400)
+                .send({ success: false, message: "All fields are required" });
+        }
+        const existingResto = yield db_1.default.resto.findUnique({ where: { number } });
+        if (existingResto) {
+            return res
+                .status(400)
+                .send({ success: false, message: "Resto already exists" });
+        }
+        const resto = yield db_1.default.resto.create({
+            data: { name, location, number, email, password: hashedPassword },
+        });
+        return res
+            .status(200)
+            .send({ success: true, message: "Resto created successfully" });
+    }
+    catch (error) {
+        return res.status(500).send({ success: false, message: error });
+    }
+});
+exports.createResto = createResto;
+const allResto = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const resto = yield db_1.default.resto.findMany();
+        if (!resto) {
+            return res
+                .status(400)
+                .send({ success: false, message: "No resto found" });
+        }
+        return res
+            .status(200)
+            .send({
+            success: true,
+            message: "All resto fetched successfully",
+            resto,
+        });
+    }
+    catch (error) {
+        return res.status(500).send({ success: false, message: error });
+    }
+});
+exports.allResto = allResto;
+const addMenu = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { restoId } = req.params;
+        const { name, price, description, type, category } = req.body;
+        const file = req.file;
+        if (!name || !price || !description) {
+            return res.status(400).send({
+                success: false,
+                message: "Name, price, and description are required",
+            });
+        }
+        let foodType = false;
+        if (type === "Veg") {
+            foodType = true;
+        }
+        if (!file) {
+            return res.status(400).send({
+                success: false,
+                message: "Image is required",
+            });
+        }
+        const resto = yield db_1.default.resto.findUnique({
+            where: { id: parseInt(restoId) },
+        });
+        if (!resto) {
+            return res.status(404).send({
+                success: false,
+                message: "Restaurant not found",
+            });
+        }
+        const fileExt = path_1.default.extname(file.originalname);
+        const fileName = `${Date.now()}-${Math.random()
+            .toString(36)
+            .substring(2)}${fileExt}`;
+        const { data: uploadData, error: uploadError } = yield supabaseConfig_1.supabase.storage
+            .from("Menu_Images")
+            .upload(fileName, file.buffer, {
+            contentType: file.mimetype,
+            upsert: false,
+        });
+        if (uploadError) {
+            return res.status(500).send({
+                success: false,
+                message: "Failed to upload image",
+                error: uploadError.message,
+            });
+        }
+        const { data: { publicUrl }, } = supabaseConfig_1.supabase.storage.from("Menu_Images").getPublicUrl(fileName);
+        const menuItem = yield db_1.default.menu.create({
+            data: {
+                name,
+                price: parseInt(price),
+                description,
+                imageUrl: publicUrl,
+                veg: foodType,
+                restoId: parseInt(restoId),
+                category,
+            },
+        });
+        yield db_1.default.resto.update({
+            where: { id: parseInt(restoId) },
+            data: { menuVersion: resto.menuVersion + 1 },
+        });
+        return res.status(200).send({
+            success: true,
+            message: "Menu item added successfully",
+            menuItem,
+        });
+    }
+    catch (error) {
+        return res.status(500).send({
+            success: false,
+            message: "Internal server error",
+            error: error instanceof Error ? error.message : "Unknown error",
+        });
+    }
+});
+exports.addMenu = addMenu;
+const getDailyRevenue = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { restoId } = req.params;
+        const { date } = req.body;
+        if (!date) {
+            return res
+                .status(400)
+                .send({
+                success: false,
+                message: "Date is required (format: YYYY-MM-DD)",
+            });
+        }
+        const startDate = new Date(date);
+        const endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + 1);
+        const orders = yield db_1.default.order.findMany({
+            where: {
+                createdAt: {
+                    gte: startDate,
+                    lt: endDate,
+                },
+                orderItems: {
+                    some: {
+                        menu: {
+                            restoId: parseInt(restoId),
+                        },
+                    },
+                },
+            },
+            select: {
+                totalPrice: true,
+                createdAt: true,
+            },
+        });
+        const totalRevenue = orders.reduce((sum, order) => sum + order.totalPrice, 0);
+        const orderCount = orders.length;
+        return res.status(200).send({
+            success: true,
+            message: "Daily revenue fetched successfully",
+            data: {
+                date: date,
+                totalRevenue,
+                orderCount,
+                orders,
+            },
+        });
+    }
+    catch (error) {
+        return res.status(500).send({ success: false, message: error });
+    }
+});
+exports.getDailyRevenue = getDailyRevenue;
+const restoOrderHistory = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { restoId } = req.params;
+        const { date } = req.body;
+        if (!date) {
+            return res
+                .status(400)
+                .send({ success: false, message: "Date is required" });
+        }
+        const orders = yield db_1.default.order.findMany({
+            include: {
+                orderItems: {
+                    include: {
+                        menu: true,
+                    },
+                },
+                user: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                        number: true,
+                    },
+                },
+            },
+        });
+        const restaurantOrders = orders.filter((order) => order.orderItems.some((item) => item.menu.restoId === parseInt(restoId)));
+        const dateFilteredOrders = restaurantOrders.filter((order) => {
+            // Use UTC date formatting to match database timezone
+            const orderDate = new Date(order.createdAt);
+            const year = orderDate.getUTCFullYear();
+            const month = String(orderDate.getUTCMonth() + 1).padStart(2, '0');
+            const day = String(orderDate.getUTCDate()).padStart(2, '0');
+            const formattedOrderDate = `${year}-${month}-${day}`;
+            return formattedOrderDate === date;
+        });
+        // Convert BigInt to string for JSON safety
+        const safeOrders = dateFilteredOrders.map((o) => {
+            var _a, _b, _c;
+            return (Object.assign(Object.assign({}, o), { user: o.user ? Object.assign(Object.assign({}, o.user), { number: (_c = (_b = (_a = o.user) === null || _a === void 0 ? void 0 : _a.number) === null || _b === void 0 ? void 0 : _b.toString) === null || _c === void 0 ? void 0 : _c.call(_b) }) : o.user }));
+        });
+        return res.status(200).send({
+            success: true,
+            message: "Order history fetched successfully",
+            orders: safeOrders,
+        });
+    }
+    catch (error) {
+        return res.status(500).send({ success: false, message: error });
+    }
+});
+exports.restoOrderHistory = restoOrderHistory;
+const deliveredOrdersForDay = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { restoId } = req.params;
+        const { date } = req.body;
+        if (!date) {
+            return res.status(400).send({ success: false, message: "Date is required (YYYY-MM-DD)" });
+        }
+        const startDate = new Date(date);
+        const endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + 1);
+        const orders = yield db_1.default.order.findMany({
+            where: {
+                status: 'Delivered',
+                createdAt: { gte: startDate, lt: endDate },
+                orderItems: {
+                    some: { menu: { restoId: parseInt(restoId) } }
+                }
+            },
+            include: {
+                orderItems: { include: { menu: true } },
+                user: { select: { id: true, name: true, email: true, number: true } },
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+        const safeOrders = orders.map((o) => {
+            var _a, _b, _c;
+            return (Object.assign(Object.assign({}, o), { user: o.user ? Object.assign(Object.assign({}, o.user), { number: (_c = (_b = (_a = o.user) === null || _a === void 0 ? void 0 : _a.number) === null || _b === void 0 ? void 0 : _b.toString) === null || _c === void 0 ? void 0 : _c.call(_b) }) : o.user }));
+        });
+        return res.status(200).send({ success: true, message: 'Delivered orders fetched successfully', orders: safeOrders });
+    }
+    catch (error) {
+        return res.status(500).send({ success: false, message: error });
+    }
+});
+exports.deliveredOrdersForDay = deliveredOrdersForDay;
+const runAds = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { restoId } = req.params;
+        const { menuName, discount } = req.body;
+        const menu = yield db_1.default.menu.findFirst({
+            where: { name: menuName },
+        });
+        if (!menu) {
+            return res
+                .status(404)
+                .send({ success: false, message: "Menu not found" });
+        }
+        const ads = yield db_1.default.ads.create({
+            data: {
+                restoId: parseInt(restoId),
+                menuId: menu.id,
+                discount: parseInt(discount),
+            },
+        });
+        return res
+            .status(200)
+            .send({ success: true, message: "Ads created successfully", ads });
+    }
+    catch (error) {
+        return res.status(500).send({ success: false, message: error });
+    }
+});
+exports.runAds = runAds;
+const getAds = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { restoId } = req.params;
+        const ads = yield db_1.default.ads.findMany({
+            where: { restoId: parseInt(restoId) },
+        });
+        return res
+            .status(200)
+            .send({ success: true, message: "Ads fetched successfully", ads });
+    }
+    catch (error) {
+        return res.status(500).send({ success: false, message: error });
+    }
+});
+exports.getAds = getAds;
+const deleteAds = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { adsId } = req.body;
+        const ads = yield db_1.default.ads.delete({
+            where: { id: parseInt(adsId) },
+        });
+        return res
+            .status(200)
+            .send({ success: true, message: "Ads deleted successfully", ads });
+    }
+    catch (error) {
+        return res.status(500).send({ success: false, message: error });
+    }
+});
+exports.deleteAds = deleteAds;
+const changeMenuStatus = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { restoId } = req.params;
+        const { status, orderId, menuId, restoId: bodyRestoId } = req.body;
+        // Use restoId from params or body
+        const actualRestoId = restoId || bodyRestoId;
+        if (!actualRestoId) {
+            return res
+                .status(404)
+                .send({ success: false, message: "Resto not found" });
+        }
+        const resto = yield db_1.default.resto.findUnique({
+            where: { id: parseInt(actualRestoId) },
+        });
+        if (!resto) {
+            return res
+                .status(404)
+                .send({ success: false, message: "Resto not found" });
+        }
+        // Handle menu availability change
+        if (menuId) {
+            if (status === undefined) {
+                return res
+                    .status(400)
+                    .send({ success: false, message: "Status is required" });
+            }
+            const menu = yield db_1.default.menu.update({
+                where: { id: parseInt(menuId) },
+                data: { availability: status },
+            });
+            yield db_1.default.resto.update({
+                where: { id: parseInt(actualRestoId) },
+                data: { menuVersion: resto.menuVersion + 1 },
+            });
+            return res
+                .status(200)
+                .send({ success: true, message: "Menu availability changed successfully", menu });
+        }
+        // Handle order status change (existing functionality)
+        if (!status || !orderId) {
+            return res
+                .status(400)
+                .send({ success: false, message: "Status and orderId are required" });
+        }
+        const order = yield db_1.default.order.update({
+            where: { id: parseInt(orderId) },
+            data: { status },
+        });
+        yield db_1.default.resto.update({
+            where: { id: parseInt(actualRestoId) },
+            data: { menuVersion: resto.menuVersion + 1 },
+        });
+        return res
+            .status(200)
+            .send({ success: true, message: "Status changed successfully", order });
+    }
+    catch (error) {
+        return res.status(500).send({ success: false, message: error });
+    }
+});
+exports.changeMenuStatus = changeMenuStatus;
+const getMenuVersion = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { restoId } = req.params;
+        if (!restoId) {
+            return res
+                .status(400)
+                .send({ success: false, message: "Resto id is required" });
+        }
+        const resto = yield db_1.default.resto.findUnique({
+            where: { id: parseInt(restoId) },
+        });
+        if (!resto) {
+            return res
+                .status(404)
+                .send({ success: false, message: "Resto not found" });
+        }
+        return res
+            .status(200)
+            .send({
+            success: true,
+            message: "Menu version fetched successfully",
+            menuVersion: resto.menuVersion,
+        });
+    }
+    catch (error) {
+        return res.status(500).send({ success: false, message: error });
+    }
+});
+exports.getMenuVersion = getMenuVersion;
+const resoStatus = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { restoId } = req.params;
+        const { status } = req.body;
+        if (status === undefined || status === null || !restoId) {
+            return res
+                .status(400)
+                .send({ success: false, message: "Status and restoId are required" });
+        }
+        const resto = yield db_1.default.resto.update({
+            where: { id: parseInt(restoId) },
+            data: { open: status },
+        });
+        return res
+            .status(200)
+            .send({
+            success: true,
+            message: "Resto status changed successfully",
+            resto,
+        });
+    }
+    catch (error) {
+        return res.status(500).send({ success: false, message: error });
+    }
+});
+exports.resoStatus = resoStatus;
+const changeOrderStatus = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { orderId, status } = req.body;
+        if (!orderId || !status) {
+            return res.status(400).send({ success: false, message: "Order ID and status are required" });
+        }
+        const order = yield db_1.default.order.update({
+            where: { id: parseInt(orderId) },
+            data: { status },
+        });
+        return res.status(200).send({ success: true, message: "Order status changed successfully", order });
+    }
+    catch (error) {
+        return res.status(500).send({ success: false, message: error });
+    }
+});
+exports.changeOrderStatus = changeOrderStatus;
+const editMenu = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { restoId } = req.params;
+        const { name, price, description, menuId } = req.body;
+        const resto = yield db_1.default.resto.findUnique({
+            where: { id: parseInt(restoId) },
+        });
+        if (!resto) {
+            return res.status(404).send({ success: false, message: "Resto not found" });
+        }
+        if (!menuId) {
+            return res.status(404).send({ success: false, message: "Menu not found" });
+        }
+        const menu = yield db_1.default.menu.update({
+            where: { id: parseInt(menuId) },
+            data: { name, price: parseFloat(price), description },
+        });
+        yield db_1.default.resto.update({
+            where: { id: parseInt(restoId) },
+            data: { menuVersion: resto.menuVersion + 1 },
+        });
+        return res.status(200).send({ success: true, message: "Menu updated successfully", menu });
+    }
+    catch (error) {
+        return res.status(500).send({ success: false, message: error });
+    }
+});
+exports.editMenu = editMenu;
+const deleteMenu = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { restoId, menuId } = req.params;
+        const resto = yield db_1.default.resto.findUnique({
+            where: { id: parseInt(restoId) },
+        });
+        if (!resto) {
+            return res.status(404).send({ success: false, message: "Resto not found" });
+        }
+        const menu = yield db_1.default.menu.delete({
+            where: { id: parseInt(menuId) },
+        });
+        yield db_1.default.resto.update({
+            where: { id: parseInt(restoId) },
+            data: { menuVersion: resto.menuVersion + 1 },
+        });
+        return res.status(200).send({ success: true, message: "Menu item deleted successfully", menu });
+    }
+    catch (error) {
+        return res.status(500).send({ success: false, message: error });
+    }
+});
+exports.deleteMenu = deleteMenu;
+const getDashboardStats = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b, _c, _d;
+    try {
+        // Assume all restos belong to this admin instance; extend with real auth if needed
+        const restosPromise = db_1.default.resto.findMany({ select: { id: true, name: true, location: true, number: true } });
+        // Month range (local)
+        const now = new Date();
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+        // Today range (local)
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+        // Use DB aggregations for month/today
+        const monthlyAggPromise = db_1.default.order.aggregate({
+            where: { createdAt: { gte: monthStart, lt: monthEnd } },
+            _count: { _all: true },
+            _sum: { totalPrice: true },
+        });
+        const todayAggPromise = db_1.default.order.aggregate({
+            where: { createdAt: { gte: todayStart, lt: todayEnd } },
+            _count: { _all: true },
+            _sum: { totalPrice: true },
+        });
+        // For per-resto cumulative totals, fetch minimal fields and attribute by first item's restoId
+        const minimalOrdersPromise = db_1.default.order.findMany({
+            select: {
+                id: true,
+                totalPrice: true,
+                createdAt: true,
+                orderItems: {
+                    select: { menu: { select: { restoId: true } } },
+                    take: 1
+                },
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+        const [restos, monthlyAgg, todayAgg, minimalOrders] = yield Promise.all([
+            restosPromise,
+            monthlyAggPromise,
+            todayAggPromise,
+            minimalOrdersPromise,
+        ]);
+        const restoTotals = {};
+        for (const o of minimalOrders) {
+            const rid = (_d = (_c = (_b = (_a = o.orderItems) === null || _a === void 0 ? void 0 : _a[0]) === null || _b === void 0 ? void 0 : _b.menu) === null || _c === void 0 ? void 0 : _c.restoId) !== null && _d !== void 0 ? _d : undefined;
+            if (!rid)
+                continue;
+            if (!restoTotals[rid])
+                restoTotals[rid] = { totalOrders: 0, totalRevenue: 0 };
+            restoTotals[rid].totalOrders += 1;
+            restoTotals[rid].totalRevenue += o.totalPrice || 0;
+        }
+        const restaurants = restos.map((r) => {
+            var _a, _b;
+            return ({
+                id: r.id,
+                name: r.name,
+                location: r.location,
+                number: r.number,
+                totalOrders: ((_a = restoTotals[r.id]) === null || _a === void 0 ? void 0 : _a.totalOrders) || 0,
+                totalRevenue: ((_b = restoTotals[r.id]) === null || _b === void 0 ? void 0 : _b.totalRevenue) || 0,
+            });
+        });
+        return res.status(200).send({
+            success: true,
+            data: {
+                restaurants,
+                monthly: { totalOrders: monthlyAgg._count._all || 0, totalRevenue: monthlyAgg._sum.totalPrice || 0 },
+                today: { totalOrders: todayAgg._count._all || 0, totalRevenue: todayAgg._sum.totalPrice || 0 },
+            }
+        });
+    }
+    catch (error) {
+        return res.status(500).send({ success: false, message: error });
+    }
+});
+exports.getDashboardStats = getDashboardStats;
