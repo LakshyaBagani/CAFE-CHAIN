@@ -57,7 +57,7 @@ const RestaurantMenu: React.FC = () => {
           
           // Check menu version in background
           try {
-            const versionRes = await axios.get(`http://localhost:3000/admin/resto/${restaurantId}/getMenuVersion`, {
+            const versionRes = await axios.get(`https://cafe-chain.onrender.com/admin/resto/${restaurantId}/getMenuVersion`, {
               withCredentials: true
             });
             
@@ -70,7 +70,7 @@ const RestaurantMenu: React.FC = () => {
             }
             
             // Version changed, fetch fresh menu data
-            const res = await axios.get(`http://localhost:3000/user/resto/${restaurantId}/menu?t=${Date.now()}`, {
+            const res = await axios.get(`https://cafe-chain.onrender.com/user/resto/${restaurantId}/menu?t=${Date.now()}`, {
               withCredentials: true,
               headers: {
                 'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -103,7 +103,7 @@ const RestaurantMenu: React.FC = () => {
           }
         } else {
           // No cached data, fetch from server
-          const res = await axios.get(`http://localhost:3000/user/resto/${restaurantId}/menu?t=${Date.now()}`, {
+          const res = await axios.get(`https://cafe-chain.onrender.com/user/resto/${restaurantId}/menu?t=${Date.now()}`, {
             withCredentials: true,
             headers: {
               'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -130,7 +130,7 @@ const RestaurantMenu: React.FC = () => {
             
             // Get and cache version
             try {
-              const versionRes = await axios.get(`http://localhost:3000/admin/resto/${restaurantId}/getMenuVersion`, {
+              const versionRes = await axios.get(`https://cafe-chain.onrender.com/admin/resto/${restaurantId}/getMenuVersion`, {
                 withCredentials: true
               });
               localStorage.setItem(`${cacheKey}_version`, versionRes.data.menuVersion.toString());
@@ -166,7 +166,7 @@ const RestaurantMenu: React.FC = () => {
     
     try {
       setDeletingId(menuId);
-      const response = await axios.delete(`http://localhost:3000/admin/resto/${restaurantId}/menu/${menuId}`, {
+      const response = await axios.delete(`https://cafe-chain.onrender.com/admin/resto/${restaurantId}/menu/${menuId}`, {
         withCredentials: true
       });
       
@@ -206,7 +206,7 @@ const RestaurantMenu: React.FC = () => {
     
     try {
       setSavingEdit(true);
-      const response = await axios.post(`http://localhost:3000/admin/resto/${restaurantId}/editMenu`, {
+      const response = await axios.post(`https://cafe-chain.onrender.com/admin/resto/${restaurantId}/editMenu`, {
         menuId: editingId,
         name: editForm.name,
         price: editForm.price,
@@ -251,7 +251,7 @@ const RestaurantMenu: React.FC = () => {
       setUpdatingStatus(menuId);
       const newStatus = !currentStatus;
       
-      const response = await axios.post('http://localhost:3000/admin/changestatus', {
+      const response = await axios.post('https://cafe-chain.onrender.com/admin/changestatus', {
         restoId: restaurantId,
         menuId: menuId,
         status: newStatus
@@ -305,7 +305,7 @@ const RestaurantMenu: React.FC = () => {
       formData.append('image', selectedImage);
 
       const response = await axios.post(
-        `http://localhost:3000/admin/resto/${restaurantId}/addMenu`,
+        `https://cafe-chain.onrender.com/admin/resto/${restaurantId}/addMenu`,
         formData,
         {
           headers: {
@@ -329,7 +329,7 @@ const RestaurantMenu: React.FC = () => {
         setSelectedImage(null);
         
         // Refresh the menu data
-        const res = await axios.get(`http://localhost:3000/user/resto/${restaurantId}/menu?t=${Date.now()}`, {
+        const res = await axios.get(`https://cafe-chain.onrender.com/user/resto/${restaurantId}/menu?t=${Date.now()}`, {
           withCredentials: true,
           headers: {
             'Cache-Control': 'no-cache, no-store, must-revalidate',

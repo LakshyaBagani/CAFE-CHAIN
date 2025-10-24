@@ -62,7 +62,7 @@ class RestaurantService {
     }
 
     try {
-      const response = await axios.get('http://localhost:3000/admin/allResto');
+      const response = await axios.get('https://cafe-chain.onrender.com/admin/allResto');
       const data = response.data;
       
       if (data.success && data.resto) {

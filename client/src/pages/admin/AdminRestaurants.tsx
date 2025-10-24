@@ -69,7 +69,7 @@ const AdminRestaurants: React.FC = () => {
       const statsEntries = await Promise.all(
         restaurantsData.map(async (r) => {
           try {
-            const resp = await axios.post(`http://localhost:3000/admin/resto/${r.id}/orderHistory`, { date: dateStr }, { withCredentials: true });
+            const resp = await axios.post(`https://cafe-chain.onrender.com/admin/resto/${r.id}/orderHistory`, { date: dateStr }, { withCredentials: true });
             if (resp.data?.success && Array.isArray(resp.data.orders)) {
               const orders = resp.data.orders;
               const total = orders.reduce((s: number, o: any) => s + (o.totalPrice || 0), 0);
@@ -95,10 +95,10 @@ const AdminRestaurants: React.FC = () => {
 
     setIsAdding(true);
     try {
-      console.log('Sending request to:', 'http://localhost:3000/admin/createResto');
+      console.log('Sending request to:', 'https://cafe-chain.onrender.com/admin/createResto');
       console.log('Request data:', newRestaurant);
       
-      const response = await axios.post('http://localhost:3000/admin/createResto', newRestaurant, {
+      const response = await axios.post('https://cafe-chain.onrender.com/admin/createResto', newRestaurant, {
         headers: {
           'Content-Type': 'application/json',
         },
@@ -139,7 +139,7 @@ const AdminRestaurants: React.FC = () => {
       setIsChangingStatus(restaurant.id);
       const newStatus = !restaurant.isActive;
       
-      const response = await axios.post(`http://localhost:3000/admin/resto/${restaurant.id}/changeStatus`, {
+      const response = await axios.post(`https://cafe-chain.onrender.com/admin/resto/${restaurant.id}/changeStatus`, {
         status: newStatus
       }, {
         withCredentials: true,
@@ -195,7 +195,7 @@ const AdminRestaurants: React.FC = () => {
       formData.append('image', selectedImage);
 
       const response = await axios.post(
-        `http://localhost:3000/admin/resto/${selectedRestaurant.id}/addMenu`,
+        `https://cafe-chain.onrender.com/admin/resto/${selectedRestaurant.id}/addMenu`,
         formData,
         {
           headers: {

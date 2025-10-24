@@ -44,7 +44,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const checkAuth = async () => {
       try {
         // Validate session using backend since JWT is httpOnly and not readable via document.cookie
-        const resp = await axios.get('http://localhost:3000/user/userInfo', { withCredentials: true });
+        const resp = await axios.get('https://cafe-chain.onrender.com/user/userInfo', { withCredentials: true });
         if (resp.data?.success && resp.data?.user) {
           setUser(resp.data.user);
           localStorage.setItem('auth_user', JSON.stringify(resp.data.user));
@@ -85,7 +85,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await axios.post('http://localhost:3000/auth/login', { email, password }, {
+      const response = await axios.post('https://cafe-chain.onrender.com/auth/login', { email, password }, {
         headers: {
           'Content-Type': 'application/json',
         },
@@ -114,7 +114,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
 
         // For regular users, fetch user info
-        const userResponse = await axios.get('http://localhost:3000/user/userInfo', {
+        const userResponse = await axios.get('https://cafe-chain.onrender.com/user/userInfo', {
           withCredentials: true
         });
         
@@ -136,7 +136,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signup = async (name: string, email: string, password: string, number: string) => {
     try {
-      const response = await axios.post('http://localhost:3000/auth/signup', { name, email, password, number }, {
+      const response = await axios.post('https://cafe-chain.onrender.com/auth/signup', { name, email, password, number }, {
         headers: {
           'Content-Type': 'application/json',
         },
@@ -152,7 +152,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = async () => {
     try {
-      await axios.post('http://localhost:3000/auth/logout', {}, {
+      await axios.post('https://cafe-chain.onrender.com/auth/logout', {}, {
         withCredentials: true
       });
       setUser(null);

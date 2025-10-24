@@ -104,7 +104,7 @@ const Profile: React.FC = () => {
   const fetchOrders = async () => {
     try {
       setOrdersError(null);
-      const response = await fetch('http://localhost:3000/user/orderHistory', {
+      const response = await fetch('https://cafe-chain.onrender.com/user/orderHistory', {
         credentials: 'include'
       });
       const data = await response.json();
@@ -130,7 +130,7 @@ const Profile: React.FC = () => {
   const handleLogout = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:3000/auth/logout', {
+      const response = await fetch('https://cafe-chain.onrender.com/auth/logout', {
         method: 'POST',
         credentials: 'include'
       });

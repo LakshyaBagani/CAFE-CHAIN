@@ -96,7 +96,7 @@ const RestaurantOrders: React.FC = () => {
       // Single optimized request
       const requestPayload = { date: dateForRequest };
       
-      const response = await axios.post(`http://localhost:3000/admin/resto/${restaurantId}/orderHistory`, requestPayload, {
+      const response = await axios.post(`https://cafe-chain.onrender.com/admin/resto/${restaurantId}/orderHistory`, requestPayload, {
         headers: {
           'Content-Type': 'application/json',
         },
@@ -129,7 +129,7 @@ const RestaurantOrders: React.FC = () => {
   const updateOrderStatus = async (orderId: number, newStatus: string) => {
     try {
       setUpdatingOrderId(orderId);
-      const response = await axios.post('http://localhost:3000/admin/order/changestatus', {
+      const response = await axios.post('https://cafe-chain.onrender.com/admin/order/changestatus', {
         orderId,
         status: newStatus
       }, {
@@ -173,7 +173,7 @@ const RestaurantOrders: React.FC = () => {
       formData.append('image', selectedImage);
 
       const response = await axios.post(
-        `http://localhost:3000/admin/resto/${restaurantId}/addMenu`,
+        `https://cafe-chain.onrender.com/admin/resto/${restaurantId}/addMenu`,
         formData,
         {
           headers: {

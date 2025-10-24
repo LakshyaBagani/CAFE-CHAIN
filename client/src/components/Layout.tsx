@@ -97,7 +97,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         } catch {}
       }
 
-      const response = await fetch('http://localhost:3000/admin/allResto');
+      const response = await fetch('https://cafe-chain.onrender.com/admin/allResto');
       const data = await response.json();
       
       if (data.success && data.resto) {

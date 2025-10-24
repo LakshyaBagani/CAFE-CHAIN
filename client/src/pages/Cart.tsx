@@ -57,7 +57,7 @@ const Cart: React.FC = () => {
       };
       
 
-      const response = await fetch(`http://localhost:3000/user/resto/${restaurantId}/order`, {
+      const response = await fetch(`https://cafe-chain.onrender.com/user/resto/${restaurantId}/order`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -40,7 +40,7 @@ const WalletPage: React.FC = () => {
       setBalanceLoading(true);
       setBalanceError(false);
       
-      const response = await axios.get('http://localhost:3000/user/getWalletBalance', {
+      const response = await axios.get('https://cafe-chain.onrender.com/user/getWalletBalance', {
         withCredentials: true
       });
       
@@ -61,7 +61,7 @@ const WalletPage: React.FC = () => {
     try {
       setHistoryError(false);
       
-      const response = await axios.get('http://localhost:3000/user/walletHistory', {
+      const response = await axios.get('https://cafe-chain.onrender.com/user/walletHistory', {
         withCredentials: true
       });
       
@@ -94,7 +94,7 @@ const WalletPage: React.FC = () => {
       setIsToppingUp(true);
       setBalanceLoading(true);
       
-      const response = await axios.post('http://localhost:3000/user/addWalletBalance', {
+      const response = await axios.post('https://cafe-chain.onrender.com/user/addWalletBalance', {
         amount: topUpAmount,
         modeOfPayment: paymentMethod
       }, {

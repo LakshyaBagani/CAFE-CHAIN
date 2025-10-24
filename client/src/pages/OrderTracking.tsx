@@ -53,7 +53,7 @@ const OrderTracking: React.FC = () => {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:3000/user/orderHistory', {
+      const response = await fetch('https://cafe-chain.onrender.com/user/orderHistory', {
         credentials: 'include'
       });
       const data = await response.json();

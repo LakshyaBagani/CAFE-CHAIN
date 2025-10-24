@@ -195,7 +195,7 @@ const Home: React.FC = () => {
         return;
       }
       // Fallback: fetch if no cache (will only happen after login anyway)
-      const response = await axios.get('http://localhost:3000/admin/allResto');
+      const response = await axios.get('https://cafe-chain.onrender.com/admin/allResto');
       const data = response.data;
       if (data.success && data.resto) {
         localStorage.setItem('allResto_cache', JSON.stringify(data.resto));
@@ -251,7 +251,7 @@ const Home: React.FC = () => {
     await fetchAndCacheMenu(locationKey, restoId);
     // After fetching, also persist current version value
     try {
-      const versionRes = await axios.get(`http://localhost:3000/admin/resto/${restoId}/getMenuVersion`, { withCredentials: true });
+      const versionRes = await axios.get(`https://cafe-chain.onrender.com/admin/resto/${restoId}/getMenuVersion`, { withCredentials: true });
       if (versionRes?.data?.menuVersion != null) {
         localStorage.setItem(`menu_${restoId}_version`, String(versionRes.data.menuVersion));
       }
@@ -261,7 +261,7 @@ const Home: React.FC = () => {
   const fetchAndCacheMenu = async (locationKey: string, restoId: number) => {
     setTrendingLoading(true);
     try {
-      const response = await axios.get(`http://localhost:3000/user/resto/${restoId}/menu`, {
+      const response = await axios.get(`https://cafe-chain.onrender.com/user/resto/${restoId}/menu`, {
         withCredentials: true
       });
       
@@ -314,7 +314,7 @@ const Home: React.FC = () => {
   // Background version check and refresh if increased
   const refreshIfVersionChanged = async (restoId: number, locationKey: string, cachedVersion: number) => {
     try {
-      const versionRes = await axios.get(`http://localhost:3000/admin/resto/${restoId}/getMenuVersion`, { withCredentials: true });
+      const versionRes = await axios.get(`https://cafe-chain.onrender.com/admin/resto/${restoId}/getMenuVersion`, { withCredentials: true });
       const currentVersion = versionRes?.data?.menuVersion ?? 0;
       if (currentVersion > cachedVersion) {
         await fetchAndCacheMenu(locationKey, restoId);

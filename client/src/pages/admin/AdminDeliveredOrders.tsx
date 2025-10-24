@@ -51,7 +51,7 @@ const AdminDeliveredOrders: React.FC = () => {
     if (!selectedRestoId) return;
     setLoading(true);
     try {
-      const resp = await axios.post(`http://localhost:3000/admin/resto/${selectedRestoId}/deliveredOrders`, { date });
+      const resp = await axios.post(`https://cafe-chain.onrender.com/admin/resto/${selectedRestoId}/deliveredOrders`, { date });
       if (resp.data?.success) {
         setOrders(resp.data.orders || []);
       } else {

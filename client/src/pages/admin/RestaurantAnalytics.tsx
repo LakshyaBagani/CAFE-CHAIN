@@ -16,7 +16,7 @@ const RestaurantAnalytics: React.FC = () => {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await axios.get(`http://localhost:3000/admin/resto/${restaurantId}/dailyRevenue`, { withCredentials: true });
+        const res = await axios.get(`https://cafe-chain.onrender.com/admin/resto/${restaurantId}/dailyRevenue`, { withCredentials: true });
         if (res.data.success) {
           setData(res.data.revenue || []);
         } else {

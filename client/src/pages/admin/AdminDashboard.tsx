@@ -48,7 +48,7 @@ const AdminDashboard: React.FC = () => {
     try {
       setIsFetching(true);
       // Fetch dashboard stats from backend (live data)
-      const resp = await fetch('http://localhost:3000/admin/dashboard/stats', { cache: 'no-store' });
+      const resp = await fetch('https://cafe-chain.onrender.com/admin/dashboard/stats', { cache: 'no-store' });
       const data = await resp.json();
       if (data.success) {
         const restaurantsFromApi = data.data.restaurants || [];

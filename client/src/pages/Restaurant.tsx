@@ -67,7 +67,7 @@ const Restaurant: React.FC = () => {
       
       // Only fetch if no cache or cache expired
       if (!restaurantData) {
-        const restaurantResponse = await fetch(`http://localhost:3000/admin/allResto`);
+        const restaurantResponse = await fetch(`https://cafe-chain.onrender.com/admin/allResto`);
         restaurantData = await restaurantResponse.json();
         
         // Cache the data
@@ -116,13 +116,13 @@ const Restaurant: React.FC = () => {
         // Silent background version check; update if increased
         try {
           console.log('[Restaurant] Checking menu version for resto', id);
-          const versionRes = await axios.get(`http://localhost:3000/admin/resto/${id}/getMenuVersion`, { withCredentials: true });
+          const versionRes = await axios.get(`https://cafe-chain.onrender.com/admin/resto/${id}/getMenuVersion`, { withCredentials: true });
           const currentVersion = versionRes?.data?.menuVersion ?? 0;
           const cachedVersion = cachedVersionStr ? parseInt(cachedVersionStr) : 0;
           console.log('[Restaurant] Version - current:', currentVersion, 'cached:', cachedVersion);
           if (currentVersion > cachedVersion) {
             console.log('[Restaurant] Version increased. Fetching latest menu for resto', id);
-            const freshRes = await axios.get(`http://localhost:3000/user/resto/${id}/menu?t=${Date.now()}`, { withCredentials: true });
+            const freshRes = await axios.get(`https://cafe-chain.onrender.com/user/resto/${id}/menu?t=${Date.now()}`, { withCredentials: true });
             if (freshRes.data?.success) {
               const freshList = Array.isArray(freshRes.data.menu) ? [...freshRes.data.menu] : [];
               freshList.sort((a: any, b: any) => Number(b.availability !== false) - Number(a.availability !== false));
@@ -142,7 +142,7 @@ const Restaurant: React.FC = () => {
       } else {
         // No cache: fetch fresh, then store menu and version
         console.log('[Restaurant] No cached menu. Fetching fresh for resto', id);
-        const menuRes = await axios.get(`http://localhost:3000/user/resto/${id}/menu`, { withCredentials: true });
+        const menuRes = await axios.get(`https://cafe-chain.onrender.com/user/resto/${id}/menu`, { withCredentials: true });
         console.log('[Restaurant] Fresh menu response', menuRes.data);
         if (menuRes.data?.success) {
           const list = Array.isArray(menuRes.data.menu) ? [...menuRes.data.menu] : [];
@@ -152,7 +152,7 @@ const Restaurant: React.FC = () => {
             localStorage.setItem(cacheKey, JSON.stringify(list));
           } catch {}
           try {
-            const versionRes = await axios.get(`http://localhost:3000/admin/resto/${id}/getMenuVersion`, { withCredentials: true });
+            const versionRes = await axios.get(`https://cafe-chain.onrender.com/admin/resto/${id}/getMenuVersion`, { withCredentials: true });
             if (versionRes?.data?.menuVersion != null) {
               localStorage.setItem(versionKey, String(versionRes.data.menuVersion));
               console.log('[Restaurant] Stored new version', versionRes.data.menuVersion, 'for resto', id);

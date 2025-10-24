@@ -68,7 +68,7 @@ const CategoryMenu: React.FC = () => {
         }
         
         // Fetch fresh data
-        const response = await axios.get(`http://localhost:3000/user/resto/${userId}/menu`, {
+        const response = await axios.get(`https://cafe-chain.onrender.com/user/resto/${userId}/menu`, {
           withCredentials: true
         });
 
