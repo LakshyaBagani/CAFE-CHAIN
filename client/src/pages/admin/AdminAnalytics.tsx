@@ -37,7 +37,14 @@ interface AnalyticsData {
 }
 
 const AdminAnalytics: React.FC = () => {
-  const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsData>({
+    totalRevenue: 0,
+    totalOrders: 0,
+    averageOrderValue: 0,
+    topRestaurants: [],
+    dailyRevenue: [],
+    monthlyRevenue: []
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -57,11 +64,27 @@ const AdminAnalytics: React.FC = () => {
         setAnalyticsData(response.data.data);
       } else {
         console.error('API returned error:', response.data.message);
-        setAnalyticsData(null);
+        // Fallback to empty data structure
+        setAnalyticsData({
+          totalRevenue: 0,
+          totalOrders: 0,
+          averageOrderValue: 0,
+          topRestaurants: [],
+          dailyRevenue: [],
+          monthlyRevenue: []
+        });
       }
     } catch (error) {
       console.error('Failed to fetch analytics data:', error);
-      setAnalyticsData(null);
+      // Fallback to empty data structure
+      setAnalyticsData({
+        totalRevenue: 0,
+        totalOrders: 0,
+        averageOrderValue: 0,
+        topRestaurants: [],
+        dailyRevenue: [],
+        monthlyRevenue: []
+      });
     } finally {
       setLoading(false);
     }
@@ -213,14 +236,6 @@ const AdminAnalytics: React.FC = () => {
     );
   }
 
-  if (!analyticsData) {
-    return (
-      <div className="text-center py-12">
-        <h3 className="text-lg font-medium text-gray-900 mb-2">No analytics data available</h3>
-        <p className="text-gray-500">Please try again later</p>
-      </div>
-    );
-  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
