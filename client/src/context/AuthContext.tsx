@@ -6,8 +6,8 @@ interface User {
   id: number;
   name: string;
   email: string;
-  number: string;
-  isVerify: boolean;
+  number?: string;
+  isVerify?: boolean;
   isAdmin?: boolean;
 }
 
@@ -42,43 +42,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Only check authentication once on app start
     if (authChecked) return;
 
-    const checkAuth = async () => {
-      try {
-        // Validate session using backend since JWT is httpOnly and not readable via document.cookie
-        const resp = await axios.get('https://cafe-chain.onrender.com/user/userInfo', { withCredentials: true });
-        if (resp.data?.success && resp.data?.user) {
-          setUser(resp.data.user);
-          localStorage.setItem('auth_user', JSON.stringify(resp.data.user));
-          localStorage.setItem('auth_user_ts', Date.now().toString());
-        } else {
-          setUser(null);
-          localStorage.removeItem('auth_user');
-          localStorage.removeItem('auth_user_ts');
-        }
-      } catch (error: any) {
-        // If unauthorized, clear; for network errors, fall back to cached user
-        if (error?.response?.status === 401) {
-          setUser(null);
-          localStorage.removeItem('auth_user');
-          localStorage.removeItem('auth_user_ts');
-          localStorage.removeItem('admin_cookie');
-        } else {
-          const cachedUser = localStorage.getItem('auth_user') || localStorage.getItem('user');
-          if (cachedUser) {
-            try {
-              const userData = JSON.parse(cachedUser);
-              setUser(userData);
-            } catch {
-              setUser(null);
-            }
-          } else {
-            setUser(null);
-          }
-        }
-      } finally {
+    const checkAuth = () => {
+      // Check for admin cookie first
+      const adminCookie = localStorage.getItem('admin_cookie');
+      if (adminCookie) {
+        setUser({ id: 0, name: 'Admin', email: 'admin@cafe-chain.com', isAdmin: true });
         setLoading(false);
         setAuthChecked(true);
+        return;
       }
+
+      // Check for regular user from localStorage
+      const cachedUser = localStorage.getItem('auth_user') || localStorage.getItem('user');
+      if (cachedUser) {
+        try {
+          const userData = JSON.parse(cachedUser);
+          setUser(userData);
+        } catch (parseError) {
+          console.error('Error parsing cached user:', parseError);
+          setUser(null);
+          localStorage.removeItem('auth_user');
+          localStorage.removeItem('auth_user_ts');
+        }
+      } else {
+        setUser(null);
+      }
+      
+      setLoading(false);
+      setAuthChecked(true);
     };
 
     checkAuth();
