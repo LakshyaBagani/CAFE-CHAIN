@@ -55,6 +55,7 @@ const AdminRestaurants: React.FC = () => {
   const fetchRestaurants = async () => {
     try {
       const restaurantsData = await restaurantService.getRestaurants();
+      console.log('Restaurants data:', restaurantsData);
       setRestaurants(restaurantsData);
       const { showToast } = await import('../../utils/toast');
       showToast('Restaurants loaded successfully', 'success');
@@ -95,8 +96,6 @@ const AdminRestaurants: React.FC = () => {
 
     setIsAdding(true);
     try {
-      console.log('Sending request to:', 'https://cafe-chain.onrender.com/admin/createResto');
-      console.log('Request data:', newRestaurant);
       
       const response = await axios.post('https://cafe-chain.onrender.com/admin/createResto', newRestaurant, {
         headers: {

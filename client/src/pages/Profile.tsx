@@ -12,6 +12,7 @@ import {
   Truck,
   CheckCircle
 } from 'lucide-react';
+import axios from 'axios';
 
 const Profile: React.FC = () => {
   const { user, logout, loading: authLoading } = useAuth();
@@ -130,12 +131,9 @@ const Profile: React.FC = () => {
   const handleLogout = async () => {
     setLoading(true);
     try {
-      const response = await fetch('https://cafe-chain.onrender.com/auth/logout', {
-        method: 'POST',
-        credentials: 'include'
-      });
+      const response = await axios.post('https://cafe-chain.onrender.com/auth/logout')
       
-      const data = await response.json();
+      const data = await response.data;
       
       if (data.success) {
         logout();
