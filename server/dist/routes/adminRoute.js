@@ -36,4 +36,6 @@ router.post("/order/changestatus", adminController_1.changeOrderStatus);
 router.post("/resto/:restoId/editMenu", adminController_1.editMenu);
 router.delete("/resto/:restoId/menu/:menuId", adminController_1.deleteMenu);
 router.get("/dashboard/stats", adminController_1.getDashboardStats);
+router.get("/resto/:restaurantId/analytics", adminController_1.getRestaurantAnalytics);
+router.get("/analytics", adminController_1.getAdminAnalytics);
 exports.default = router;

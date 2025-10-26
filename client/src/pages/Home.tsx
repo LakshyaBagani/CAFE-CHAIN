@@ -121,8 +121,6 @@ const Home: React.FC = () => {
       if (restaurant) {
         // Only switch if user hasn't made a selection yet
         if (!userHasSelectedCafe) {
-          console.log('Setting initial restaurant from URL:', restaurant.name);
-          console.log(selectedCafe);
           
           setSelectedLocation({
             id: restaurant.id,
@@ -268,7 +266,6 @@ const Home: React.FC = () => {
       });
       
       const data = response.data;
-      console.log('Menu API response (Home) for restoId', restoId, data);
       
       if (data.success) {
         // Process menu items

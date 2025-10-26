@@ -72,7 +72,6 @@ const CategoryMenu: React.FC = () => {
           withCredentials: true
         });
 
-        console.log('Menu API response (CategoryMenu) for restoId', userId, response.data);
         if (response.data.success) {
           const items = response.data.menu;
           // Sort: available first, unavailable last

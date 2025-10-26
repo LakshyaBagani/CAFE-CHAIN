@@ -114,12 +114,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           setSelectedLocation(locationData[0]);
           // Don't mark as user selection since this is automatic
         }
-        console.log('✅ TODO: Locations fetched successfully in Layout:', locationData);
-      } else {
-        console.log('❌ TODO: Failed to fetch locations in Layout:', data);
       }
     } catch (error) {
-      console.log('❌ TODO: Error fetching locations in Layout:', error);
+      console.error('Error fetching locations in Layout:', error);
     }
   };
 
@@ -135,7 +132,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       navigate(`/cafe/${selectedLocation.id}`);
     }
     
-    console.log('✅ TODO: Location selected:', selectedLocation);
   };
 
   const isAdminRoute = location.pathname.startsWith('/admin');

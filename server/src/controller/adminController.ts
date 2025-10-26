@@ -45,15 +45,350 @@ export const allResto = async (req: Request, res: Response) => {
         .status(400)
         .send({ success: false, message: "No resto found" });
     }
-    return res
-      .status(200)
-      .send({
-        success: true,
-        message: "All resto fetched successfully",
-        resto,
-      });
+    return res.status(200).send({
+      success: true,
+      message: "All resto fetched successfully",
+      resto,
+    });
   } catch (error) {
     return res.status(500).send({ success: false, message: error });
+  }
+};
+
+export const getRestaurantAnalytics = async (req: Request, res: Response) => {
+  try {
+    const { restaurantId } = req.params;
+
+    if (!restaurantId) {
+      return res.status(400).send({ success: false, message: 'Restaurant ID is required' });
+    }
+
+    // Calculate date range for last 7 days
+    const now = new Date();
+    const startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    // Get restaurant info
+    const restaurant = await prisma.resto.findUnique({
+      where: { id: parseInt(restaurantId) },
+      select: { id: true, name: true }
+    });
+
+    if (!restaurant) {
+      return res.status(404).send({ success: false, message: 'Restaurant not found' });
+    }
+
+    // Get orders for this restaurant in the specified period
+    const orders = await prisma.order.findMany({
+      where: {
+        orderItems: {
+          some: {
+            menu: {
+              restoId: parseInt(restaurantId)
+            }
+          }
+        },
+        createdAt: {
+          gte: startDate,
+          lte: now
+        }
+      },
+      include: {
+        orderItems: {
+          where: {
+            menu: {
+              restoId: parseInt(restaurantId)
+            }
+          },
+          include: {
+            menu: true
+          }
+        },
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            number: true
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    // Calculate overview metrics
+    const totalRevenue = orders.reduce((sum, order) => {
+      const restaurantOrderTotal = order.orderItems.reduce((itemSum, item) => itemSum + (item.quantity * item.menu.price), 0);
+      return sum + restaurantOrderTotal;
+    }, 0);
+
+    const totalOrders = orders.length;
+    const totalCustomers = new Set(orders.map(order => order.user.id)).size;
+    const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+    // Calculate growth rate (compare with previous period)
+    const previousStartDate = new Date(startDate.getTime() - (now.getTime() - startDate.getTime()));
+    const previousOrders = await prisma.order.findMany({
+      where: {
+        orderItems: {
+          some: {
+            menu: {
+              restoId: parseInt(restaurantId)
+            }
+          }
+        },
+        createdAt: {
+          gte: previousStartDate,
+          lt: startDate
+        }
+      },
+      include: {
+        orderItems: {
+          where: {
+            menu: {
+              restoId: parseInt(restaurantId)
+            }
+          },
+          include: {
+            menu: true
+          }
+        }
+      }
+    });
+
+    const previousRevenue = previousOrders.reduce((sum, order) => {
+      const restaurantOrderTotal = order.orderItems.reduce((itemSum, item) => itemSum + (item.quantity * item.menu.price), 0);
+      return sum + restaurantOrderTotal;
+    }, 0);
+
+    const growthRate = previousRevenue > 0 ? ((totalRevenue - previousRevenue) / previousRevenue) * 100 : 0;
+
+    // Get daily sales data
+    const dailySalesMap = new Map();
+    orders.forEach(order => {
+      const date = order.createdAt.toISOString().split('T')[0];
+      const orderRevenue = order.orderItems.reduce((sum, item) => sum + (item.quantity * item.menu.price), 0);
+      
+      if (!dailySalesMap.has(date)) {
+        dailySalesMap.set(date, {
+          date,
+          revenue: 0,
+          orders: 0,
+          customers: new Set()
+        });
+      }
+      
+      const dayData = dailySalesMap.get(date);
+      dayData.revenue += orderRevenue;
+      dayData.orders += 1;
+      dayData.customers.add(order.user.id);
+    });
+
+    const dailySales = Array.from(dailySalesMap.values()).map(day => ({
+      date: day.date,
+      revenue: day.revenue,
+      orders: day.orders,
+      customers: day.customers.size
+    })).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    // Get top selling items
+    const itemSales = new Map();
+    orders.forEach(order => {
+      order.orderItems.forEach(item => {
+        const key = `${item.menu.id}-${item.menu.name}`;
+        if (!itemSales.has(key)) {
+          itemSales.set(key, {
+            id: item.menu.id,
+            name: item.menu.name,
+            quantity: 0,
+            revenue: 0
+          });
+        }
+        const itemData = itemSales.get(key);
+        itemData.quantity += item.quantity;
+        itemData.revenue += item.quantity * item.menu.price;
+      });
+    });
+
+    const topSellingItems = Array.from(itemSales.values())
+      .sort((a, b) => b.quantity - a.quantity)
+      .slice(0, 5);
+
+    // Get customer metrics
+    const allCustomers = new Set(orders.map(order => order.user.id));
+    const newCustomers = new Set();
+    const returningCustomers = new Set();
+
+    // Check if customers are new or returning
+    for (const customerId of allCustomers) {
+      const customerOrders = orders.filter(order => order.user.id === customerId);
+      const firstOrderDate = new Date(Math.min(...customerOrders.map(order => order.createdAt.getTime())));
+      
+      if (firstOrderDate >= startDate) {
+        newCustomers.add(customerId);
+      } else {
+        returningCustomers.add(customerId);
+      }
+    }
+
+    return res.status(200).send({
+      success: true,
+      data: {
+        overview: {
+          totalRevenue,
+          totalOrders,
+          totalCustomers,
+          averageOrderValue,
+          growthRate: Math.round(growthRate * 100) / 100
+        },
+        dailySales,
+        topSellingItems,
+        customerMetrics: {
+          newCustomers: newCustomers.size,
+          returningCustomers: returningCustomers.size,
+          averageSessionTime: 25, // Mock data - would need session tracking
+          customerSatisfaction: 4.6 // Mock data - would need rating system
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Restaurant analytics error:', error);
+    return res.status(500).send({ success: false, message: 'Failed to fetch restaurant analytics' });
+  }
+};
+
+// Get admin analytics data for all restaurants
+export const getAdminAnalytics = async (req: Request, res: Response) => {
+  try {
+    // Calculate date range for last 7 days
+    const now = new Date();
+    const startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    // Get all orders in the specified period
+    const orders = await prisma.order.findMany({
+      where: {
+        createdAt: {
+          gte: startDate,
+          lte: now
+        }
+      },
+      include: {
+        orderItems: {
+          include: {
+            menu: {
+              include: {
+                resto: {
+                  select: {
+                    id: true,
+                    name: true
+                  }
+                }
+              }
+            }
+          }
+        },
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            number: true
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    // Calculate total metrics
+    const totalRevenue = orders.reduce((sum, order) => sum + order.totalPrice, 0);
+    const totalOrders = orders.length;
+    const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+    // Get daily revenue data
+    const dailyRevenueMap = new Map();
+    orders.forEach(order => {
+      const date = order.createdAt.toISOString().split('T')[0];
+      if (!dailyRevenueMap.has(date)) {
+        dailyRevenueMap.set(date, {
+          date,
+          revenue: 0,
+          orders: 0
+        });
+      }
+      const dayData = dailyRevenueMap.get(date);
+      dayData.revenue += order.totalPrice;
+      dayData.orders += 1;
+    });
+
+    const dailyRevenue = Array.from(dailyRevenueMap.values())
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    // Get monthly revenue data (last 6 months)
+    const monthlyRevenueMap = new Map();
+    orders.forEach(order => {
+      const monthKey = order.createdAt.toISOString().substring(0, 7); // YYYY-MM
+      const monthName = new Date(order.createdAt).toLocaleDateString('en-US', { month: 'short' });
+      
+      if (!monthlyRevenueMap.has(monthKey)) {
+        monthlyRevenueMap.set(monthKey, {
+          month: monthName,
+          revenue: 0,
+          orders: 0
+        });
+      }
+      const monthData = monthlyRevenueMap.get(monthKey);
+      monthData.revenue += order.totalPrice;
+      monthData.orders += 1;
+    });
+
+    const monthlyRevenue = Array.from(monthlyRevenueMap.values())
+      .sort((a, b) => {
+        const monthOrder = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return monthOrder.indexOf(a.month) - monthOrder.indexOf(b.month);
+      })
+      .slice(-6); // Last 6 months
+
+    // Get top restaurants by revenue
+    const restaurantRevenueMap = new Map();
+    orders.forEach(order => {
+      // Get restaurant info from the first order item
+      if (order.orderItems.length > 0) {
+        const restaurantId = order.orderItems[0].menu.resto.id;
+        const restaurantName = order.orderItems[0].menu.resto.name;
+        
+        if (!restaurantRevenueMap.has(restaurantId)) {
+          restaurantRevenueMap.set(restaurantId, {
+            id: restaurantId,
+            name: restaurantName,
+            revenue: 0,
+            orders: 0,
+            rating: 4.5 // Mock rating - would need rating system
+          });
+        }
+        const restaurantData = restaurantRevenueMap.get(restaurantId);
+        // Use order total price (includes GST) instead of calculating from items
+        restaurantData.revenue += order.totalPrice;
+        restaurantData.orders += 1;
+      }
+    });
+
+    const topRestaurants = Array.from(restaurantRevenueMap.values())
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 5);
+
+    return res.status(200).send({
+      success: true,
+      data: {
+        totalRevenue,
+        totalOrders,
+        averageOrderValue,
+        topRestaurants,
+        dailyRevenue,
+        monthlyRevenue
+      }
+    });
+  } catch (error) {
+    console.error('Admin analytics error:', error);
+    return res.status(500).send({ success: false, message: 'Failed to fetch admin analytics' });
   }
 };
 
@@ -155,12 +490,10 @@ export const getDailyRevenue = async (req: Request, res: Response) => {
     const { date } = req.body;
 
     if (!date) {
-      return res
-        .status(400)
-        .send({
-          success: false,
-          message: "Date is required (format: YYYY-MM-DD)",
-        });
+      return res.status(400).send({
+        success: false,
+        message: "Date is required (format: YYYY-MM-DD)",
+      });
     }
 
     const startDate = new Date(date as string);
@@ -213,7 +546,6 @@ export const restoOrderHistory = async (req: Request, res: Response) => {
     const { restoId } = req.params;
     const { date } = req.body;
 
-
     if (!date) {
       return res
         .status(400)
@@ -246,18 +578,19 @@ export const restoOrderHistory = async (req: Request, res: Response) => {
       // Use UTC date formatting to match database timezone
       const orderDate = new Date(order.createdAt);
       const year = orderDate.getUTCFullYear();
-      const month = String(orderDate.getUTCMonth() + 1).padStart(2, '0');
-      const day = String(orderDate.getUTCDate()).padStart(2, '0');
+      const month = String(orderDate.getUTCMonth() + 1).padStart(2, "0");
+      const day = String(orderDate.getUTCDate()).padStart(2, "0");
       const formattedOrderDate = `${year}-${month}-${day}`;
-      
-      
+
       return formattedOrderDate === date;
     });
 
     // Convert BigInt to string for JSON safety
     const safeOrders = dateFilteredOrders.map((o: any) => ({
       ...o,
-      user: o.user ? { ...o.user, number: o.user?.number?.toString?.() } : o.user,
+      user: o.user
+        ? { ...o.user, number: o.user?.number?.toString?.() }
+        : o.user,
     }));
 
     return res.status(200).send({
@@ -276,7 +609,9 @@ export const deliveredOrdersForDay = async (req: Request, res: Response) => {
     const { date } = req.body as { date?: string };
 
     if (!date) {
-      return res.status(400).send({ success: false, message: "Date is required (YYYY-MM-DD)" });
+      return res
+        .status(400)
+        .send({ success: false, message: "Date is required (YYYY-MM-DD)" });
     }
 
     const startDate = new Date(date);
@@ -285,25 +620,33 @@ export const deliveredOrdersForDay = async (req: Request, res: Response) => {
 
     const orders = await prisma.order.findMany({
       where: {
-        status: 'Delivered',
+        status: "Delivered",
         createdAt: { gte: startDate, lt: endDate },
         orderItems: {
-          some: { menu: { restoId: parseInt(restoId) } }
-        }
+          some: { menu: { restoId: parseInt(restoId) } },
+        },
       },
       include: {
         orderItems: { include: { menu: true } },
         user: { select: { id: true, name: true, email: true, number: true } },
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: "desc" },
     });
 
     const safeOrders = orders.map((o: any) => ({
       ...o,
-      user: o.user ? { ...o.user, number: o.user?.number?.toString?.() } : o.user,
+      user: o.user
+        ? { ...o.user, number: o.user?.number?.toString?.() }
+        : o.user,
     }));
 
-    return res.status(200).send({ success: true, message: 'Delivered orders fetched successfully', orders: safeOrders });
+    return res
+      .status(200)
+      .send({
+        success: true,
+        message: "Delivered orders fetched successfully",
+        orders: safeOrders,
+      });
   } catch (error) {
     return res.status(500).send({ success: false, message: error });
   }
@@ -398,7 +741,7 @@ export const changeMenuStatus = async (req: Request, res: Response) => {
           .status(400)
           .send({ success: false, message: "Status is required" });
       }
-      
+
       const menu = await prisma.menu.update({
         where: { id: parseInt(menuId) },
         data: { availability: status },
@@ -411,7 +754,11 @@ export const changeMenuStatus = async (req: Request, res: Response) => {
 
       return res
         .status(200)
-        .send({ success: true, message: "Menu availability changed successfully", menu });
+        .send({
+          success: true,
+          message: "Menu availability changed successfully",
+          menu,
+        });
     }
 
     // Handle order status change (existing functionality)
@@ -454,18 +801,15 @@ export const getMenuVersion = async (req: Request, res: Response) => {
         .status(404)
         .send({ success: false, message: "Resto not found" });
     }
-    return res
-      .status(200)
-      .send({
-        success: true,
-        message: "Menu version fetched successfully",
-        menuVersion: resto.menuVersion,
-      });
+    return res.status(200).send({
+      success: true,
+      message: "Menu version fetched successfully",
+      menuVersion: resto.menuVersion,
+    });
   } catch (error) {
     return res.status(500).send({ success: false, message: error });
   }
 };
-
 export const resoStatus = async (req: Request, res: Response) => {
   try {
     const { restoId } = req.params;
@@ -480,29 +824,34 @@ export const resoStatus = async (req: Request, res: Response) => {
       where: { id: parseInt(restoId) },
       data: { open: status },
     });
-    return res
-      .status(200)
-      .send({
-        success: true,
-        message: "Resto status changed successfully",
-        resto,
-      });
+    return res.status(200).send({
+      success: true,
+      message: "Resto status changed successfully",
+      resto,
+    });
   } catch (error) {
     return res.status(500).send({ success: false, message: error });
   }
 };
-
 export const changeOrderStatus = async (req: Request, res: Response) => {
   try {
     const { orderId, status } = req.body;
     if (!orderId || !status) {
-      return res.status(400).send({ success: false, message: "Order ID and status are required" });
+      return res
+        .status(400)
+        .send({ success: false, message: "Order ID and status are required" });
     }
     const order = await prisma.order.update({
       where: { id: parseInt(orderId) },
       data: { status },
     });
-    return res.status(200).send({ success: true, message: "Order status changed successfully", order });
+    return res
+      .status(200)
+      .send({
+        success: true,
+        message: "Order status changed successfully",
+        order,
+      });
   } catch (error) {
     return res.status(500).send({ success: false, message: error });
   }
@@ -511,15 +860,19 @@ export const changeOrderStatus = async (req: Request, res: Response) => {
 export const editMenu = async (req: Request, res: Response) => {
   try {
     const { restoId } = req.params;
-    const { name, price, description , menuId } = req.body;
+    const { name, price, description, menuId } = req.body;
     const resto = await prisma.resto.findUnique({
       where: { id: parseInt(restoId) },
     });
     if (!resto) {
-      return res.status(404).send({ success: false, message: "Resto not found" });
+      return res
+        .status(404)
+        .send({ success: false, message: "Resto not found" });
     }
     if (!menuId) {
-      return res.status(404).send({ success: false, message: "Menu not found" });
+      return res
+        .status(404)
+        .send({ success: false, message: "Menu not found" });
     }
     const menu = await prisma.menu.update({
       where: { id: parseInt(menuId) },
@@ -530,7 +883,9 @@ export const editMenu = async (req: Request, res: Response) => {
       where: { id: parseInt(restoId) },
       data: { menuVersion: resto.menuVersion + 1 },
     });
-    return res.status(200).send({ success: true, message: "Menu updated successfully", menu  });
+    return res
+      .status(200)
+      .send({ success: true, message: "Menu updated successfully", menu });
   } catch (error) {
     return res.status(500).send({ success: false, message: error });
   }
@@ -543,9 +898,11 @@ export const deleteMenu = async (req: Request, res: Response) => {
       where: { id: parseInt(restoId) },
     });
     if (!resto) {
-      return res.status(404).send({ success: false, message: "Resto not found" });
+      return res
+        .status(404)
+        .send({ success: false, message: "Resto not found" });
     }
-    
+
     const menu = await prisma.menu.delete({
       where: { id: parseInt(menuId) },
     });
@@ -554,7 +911,9 @@ export const deleteMenu = async (req: Request, res: Response) => {
       where: { id: parseInt(restoId) },
       data: { menuVersion: resto.menuVersion + 1 },
     });
-    return res.status(200).send({ success: true, message: "Menu item deleted successfully", menu });
+    return res
+      .status(200)
+      .send({ success: true, message: "Menu item deleted successfully", menu });
   } catch (error) {
     return res.status(500).send({ success: false, message: error });
   }
@@ -563,7 +922,9 @@ export const deleteMenu = async (req: Request, res: Response) => {
 export const getDashboardStats = async (req: Request, res: Response) => {
   try {
     // Assume all restos belong to this admin instance; extend with real auth if needed
-    const restosPromise = prisma.resto.findMany({ select: { id: true, name: true, location: true, number: true } });
+    const restosPromise = prisma.resto.findMany({
+      select: { id: true, name: true, location: true, number: true },
+    });
 
     // Month range (local)
     const now = new Date();
@@ -571,8 +932,16 @@ export const getDashboardStats = async (req: Request, res: Response) => {
     const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
     // Today range (local)
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    const todayStart = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate()
+    );
+    const todayEnd = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate() + 1
+    );
 
     // Use DB aggregations for month/today
     const monthlyAggPromise = prisma.order.aggregate({
@@ -595,10 +964,10 @@ export const getDashboardStats = async (req: Request, res: Response) => {
         createdAt: true,
         orderItems: {
           select: { menu: { select: { restoId: true } } },
-          take: 1
+          take: 1,
         },
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: "desc" },
     });
 
     const [restos, monthlyAgg, todayAgg, minimalOrders] = await Promise.all([
@@ -608,11 +977,16 @@ export const getDashboardStats = async (req: Request, res: Response) => {
       minimalOrdersPromise,
     ]);
 
-    const restoTotals: Record<number, { totalOrders: number; totalRevenue: number }> = {};
+    const restoTotals: Record<
+      number,
+      { totalOrders: number; totalRevenue: number }
+    > = {};
     for (const o of minimalOrders) {
-      const rid = (o.orderItems?.[0]?.menu?.restoId as number | undefined) ?? undefined;
+      const rid =
+        (o.orderItems?.[0]?.menu?.restoId as number | undefined) ?? undefined;
       if (!rid) continue;
-      if (!restoTotals[rid]) restoTotals[rid] = { totalOrders: 0, totalRevenue: 0 };
+      if (!restoTotals[rid])
+        restoTotals[rid] = { totalOrders: 0, totalRevenue: 0 };
       restoTotals[rid].totalOrders += 1;
       restoTotals[rid].totalRevenue += o.totalPrice || 0;
     }
@@ -630,9 +1004,15 @@ export const getDashboardStats = async (req: Request, res: Response) => {
       success: true,
       data: {
         restaurants,
-        monthly: { totalOrders: monthlyAgg._count._all || 0, totalRevenue: monthlyAgg._sum.totalPrice || 0 },
-        today: { totalOrders: todayAgg._count._all || 0, totalRevenue: todayAgg._sum.totalPrice || 0 },
-      }
+        monthly: {
+          totalOrders: monthlyAgg._count._all || 0,
+          totalRevenue: monthlyAgg._sum.totalPrice || 0,
+        },
+        today: {
+          totalOrders: todayAgg._count._all || 0,
+          totalRevenue: todayAgg._sum.totalPrice || 0,
+        },
+      },
     });
   } catch (error) {
     return res.status(500).send({ success: false, message: error });

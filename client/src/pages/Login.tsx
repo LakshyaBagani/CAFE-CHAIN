@@ -31,7 +31,6 @@ const Login: React.FC = () => {
       await login(formData.email, formData.password);
       navigate('/');
     } catch (err: any) {
-      console.log(' TODO: Login failed - handle authentication error:', err.message);
       setError(err.message || 'Login failed');
     } finally {
       setLoading(false);

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { 
   BarChart3, 
   TrendingUp, 
@@ -38,49 +39,29 @@ interface AnalyticsData {
 const AdminAnalytics: React.FC = () => {
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [timeRange, setTimeRange] = useState('7d');
-  // const [selectedMetric, setSelectedMetric] = useState('revenue');
 
   useEffect(() => {
     fetchAnalyticsData();
-  }, [timeRange]);
+  }, []);
 
   const fetchAnalyticsData = async () => {
     try {
-      // Mock data for demo
-      const mockData: AnalyticsData = {
-        totalRevenue: 125000,
-        totalOrders: 2500,
-        averageOrderValue: 50,
-        topRestaurants: [
-          { id: 1, name: 'Downtown Bistro', revenue: 35000, orders: 700, rating: 4.8 },
-          { id: 2, name: 'Garden Cafe', revenue: 28000, orders: 560, rating: 4.6 },
-          { id: 3, name: 'Pizza Palace', revenue: 25000, orders: 500, rating: 4.5 },
-          { id: 4, name: 'Sushi Corner', revenue: 22000, orders: 440, rating: 4.7 },
-          { id: 5, name: 'Burger Joint', revenue: 20000, orders: 400, rating: 4.4 }
-        ],
-        dailyRevenue: [
-          { date: '2024-01-09', revenue: 1200, orders: 24 },
-          { date: '2024-01-10', revenue: 1500, orders: 30 },
-          { date: '2024-01-11', revenue: 1800, orders: 36 },
-          { date: '2024-01-12', revenue: 2100, orders: 42 },
-          { date: '2024-01-13', revenue: 1900, orders: 38 },
-          { date: '2024-01-14', revenue: 2200, orders: 44 },
-          { date: '2024-01-15', revenue: 2500, orders: 50 }
-        ],
-        monthlyRevenue: [
-          { month: 'Jan', revenue: 25000, orders: 500 },
-          { month: 'Feb', revenue: 28000, orders: 560 },
-          { month: 'Mar', revenue: 32000, orders: 640 },
-          { month: 'Apr', revenue: 30000, orders: 600 },
-          { month: 'May', revenue: 35000, orders: 700 },
-          { month: 'Jun', revenue: 40000, orders: 800 }
-        ]
-      };
+      setLoading(true);
       
-      setAnalyticsData(mockData);
+      const response = await axios.get(`https://cafe-chain.onrender.com/admin/analytics`, {
+        params: { period: '7d' },
+        withCredentials: true
+      });
+      
+      if (response.data.success) {
+        setAnalyticsData(response.data.data);
+      } else {
+        console.error('API returned error:', response.data.message);
+        setAnalyticsData(null);
+      }
     } catch (error) {
       console.error('Failed to fetch analytics data:', error);
+      setAnalyticsData(null);
     } finally {
       setLoading(false);
     }
@@ -91,9 +72,9 @@ const AdminAnalytics: React.FC = () => {
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-IN', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'INR',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
@@ -101,8 +82,133 @@ const AdminAnalytics: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600"></div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header Skeleton */}
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-4">
+            <div className="w-9 h-9 bg-gray-200 rounded-lg animate-pulse"></div>
+            <div>
+              <div className="h-8 w-64 bg-gray-200 rounded animate-pulse mb-2"></div>
+              <div className="h-4 w-80 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+          </div>
+          <div className="w-32 h-10 bg-gray-200 rounded-lg animate-pulse"></div>
+        </div>
+
+        {/* Key Metrics Skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center">
+                <div className="p-3 bg-gray-200 rounded-lg animate-pulse">
+                  <div className="h-6 w-6"></div>
+                </div>
+                <div className="ml-4 flex-1">
+                  <div className="h-4 w-24 bg-gray-200 rounded animate-pulse mb-2"></div>
+                  <div className="h-8 w-20 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+          {/* Daily Revenue Chart Skeleton */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="h-6 w-32 bg-gray-200 rounded animate-pulse"></div>
+              <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+            <div className="space-y-4">
+              {[1, 2, 3, 4, 5, 6, 7].map((i) => (
+                <div key={i} className="flex items-center space-x-4">
+                  <div className="w-16 h-4 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="h-4 w-16 bg-gray-200 rounded animate-pulse"></div>
+                      <div className="h-4 w-12 bg-gray-200 rounded animate-pulse"></div>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div className="bg-gray-300 h-2 rounded-full animate-pulse" style={{ width: `${Math.random() * 100}%` }}></div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Top Restaurants Skeleton */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="h-6 w-32 bg-gray-200 rounded animate-pulse"></div>
+              <div className="h-5 w-5 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+            <div className="space-y-4">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="flex items-center space-x-4">
+                  <div className="w-8 h-8 bg-gray-200 rounded-lg animate-pulse"></div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
+                      <div className="h-4 w-8 bg-gray-200 rounded animate-pulse"></div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="h-4 w-16 bg-gray-200 rounded animate-pulse"></div>
+                      <div className="h-4 w-12 bg-gray-200 rounded animate-pulse"></div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Monthly Revenue Chart Skeleton */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <div className="h-6 w-40 bg-gray-200 rounded animate-pulse"></div>
+            <div className="h-4 w-16 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+          <div className="grid grid-cols-6 gap-4">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="text-center">
+                <div className="mb-2">
+                  <div className="w-full bg-gray-200 rounded-lg h-32 animate-pulse"></div>
+                </div>
+                <div className="h-4 w-8 bg-gray-200 rounded animate-pulse mx-auto mb-1"></div>
+                <div className="h-3 w-12 bg-gray-200 rounded animate-pulse mx-auto mb-1"></div>
+                <div className="h-3 w-8 bg-gray-200 rounded animate-pulse mx-auto"></div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Performance Insights Skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="h-6 w-32 bg-gray-200 rounded animate-pulse mb-4"></div>
+            <div className="space-y-4">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="flex items-center space-x-3">
+                  <div className="w-2 h-2 bg-gray-200 rounded-full animate-pulse"></div>
+                  <div className="h-4 w-48 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="h-6 w-24 bg-gray-200 rounded animate-pulse mb-4"></div>
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                  <div className="h-4 w-4 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="h-4 w-32 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -135,17 +241,6 @@ const AdminAnalytics: React.FC = () => {
         </div>
         
         <div className="flex items-center space-x-4">
-          <select
-            value={timeRange}
-            onChange={(e) => setTimeRange(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
-          >
-            <option value="7d">Last 7 days</option>
-            <option value="30d">Last 30 days</option>
-            <option value="90d">Last 90 days</option>
-            <option value="1y">Last year</option>
-          </select>
-          
           <button className="flex items-center space-x-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors">
             <Download className="h-4 w-4" />
             <span>Export Report</span>

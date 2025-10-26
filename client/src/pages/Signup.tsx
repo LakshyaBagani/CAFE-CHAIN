@@ -58,7 +58,6 @@ const Signup: React.FC = () => {
       });
 
       if (response.data.success) {
-        console.log('OTP sent successfully');
       } else {
         throw new Error(response.data.message || 'Failed to send OTP');
       }

@@ -55,10 +55,7 @@ const AdminRestaurants: React.FC = () => {
   const fetchRestaurants = async () => {
     try {
       const restaurantsData = await restaurantService.getRestaurants();
-      console.log('Restaurants data:', restaurantsData);
       setRestaurants(restaurantsData);
-      const { showToast } = await import('../../utils/toast');
-      showToast('Restaurants loaded successfully', 'success');
 
       // After restaurants load, fetch today's stats for each
       const today = new Date();
@@ -81,6 +78,10 @@ const AdminRestaurants: React.FC = () => {
         })
       );
       setDailyStats(Object.fromEntries(statsEntries));
+      
+      // Show success toast only after all data is loaded
+      const { showToast } = await import('../../utils/toast');
+      showToast('Restaurants loaded successfully', 'success');
     } catch (error: any) {
       const { showToast } = await import('../../utils/toast');
       showToast('Failed to fetch restaurants', 'error');
