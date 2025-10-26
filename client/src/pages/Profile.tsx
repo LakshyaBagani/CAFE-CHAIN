@@ -69,6 +69,7 @@ const Profile: React.FC = () => {
       try {
         setRetryCount(0);
         // Use cached user info only; do not call userInfo API here
+        console.log(retryCount);
         await Promise.all([useCachedUserInfo(), fetchOrders()]);
       } catch (error) {
         console.error('Failed to load profile data:', error);

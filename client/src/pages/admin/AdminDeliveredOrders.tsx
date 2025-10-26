@@ -1,8 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
-import { Calendar, Clock, IndianRupee, PackageCheck, User, ArrowLeft } from 'lucide-react';
-import { formatDate } from '../../utils/dateUtils';
+import { Calendar, IndianRupee, PackageCheck, ArrowLeft } from 'lucide-react';
 
 interface DeliveredOrderItem {
   id: number;
@@ -73,128 +72,180 @@ const AdminDeliveredOrders: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-6">
-        <div>
-          <div className="flex items-center gap-3 mb-2">
-            <Link to="/admin" className="text-gray-600 hover:text-amber-600 px-3 py-2 rounded-lg border border-gray-200 hover:border-amber-300 transition-colors">
-              <ArrowLeft className="w-4 h-4" />
+      {/* Header */}
+      <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl p-6 mb-8 border border-amber-200">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link to="/admin" className="text-amber-700 hover:text-amber-900 transition-colors bg-white/80 px-4 py-2 rounded-xl hover:bg-white">
+              <ArrowLeft className="w-5 h-5" />
             </Link>
-            <h1 className="text-2xl font-bold text-gray-900">Delivered Orders</h1>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Delivered Orders</h1>
+              <p className="text-amber-700">View and track completed orders</p>
+            </div>
           </div>
-          <p className="text-gray-600">Daily history of delivered orders per restaurant</p>
-        </div>
-        <div className="flex flex-col sm:flex-row gap-3">
-          <select
-            value={selectedRestoId ?? ''}
-            onChange={(e) => setSelectedRestoId(parseInt(e.target.value))}
-            className="border border-gray-300 rounded-lg px-3 py-2"
-          >
-            {(JSON.parse(localStorage.getItem('allResto_cache') || '[]') as any[]).map(r => (
-              <option key={r.id} value={r.id}>{r.name}</option>
-            ))}
-          </select>
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2"
-          />
-        </div>
-      </div>
-
-      <div className="mb-4 text-sm text-gray-600">
-        Showing delivered orders for <span className="font-medium">{(() => { const [y,m,d] = date.split('-'); return `${d}/${m}/${y}`; })()}</span>
-      </div>
-
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2 text-gray-700">
-            <Calendar className="w-4 h-4" />
-            <span className="text-sm">{(() => { const [y,m,d] = date.split('-'); return `${d}/${m}/${y}`; })()}</span>
-          </div>
-          <div className="flex items-center gap-2 text-gray-700">
-            <PackageCheck className="w-4 h-4" />
-            <span className="text-sm">{orders.length} orders</span>
-          </div>
-          <div className="flex items-center gap-2 text-amber-700 font-semibold">
-            <IndianRupee className="w-4 h-4" />
-            <span>₹{totalRevenue}</span>
+          <div className="flex items-center gap-4">
+            <div className="text-right">
+              <p className="text-sm text-amber-700 font-medium">Total Orders</p>
+              <p className="text-2xl font-bold text-gray-900">{orders.length}</p>
+            </div>
           </div>
         </div>
       </div>
 
-      {loading ? (
-        <div className="flex items-center justify-center h-40">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-amber-600"></div>
-        </div>
-      ) : orders.length === 0 ? (
-        <div className="text-center text-gray-600">No delivered orders for the selected day.</div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
-          {orders.map((order) => (
-            <div
-              key={order.id}
-              className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 hover:shadow-md transition-all duration-200 flex flex-col h-full w-full"
+      {/* Controls */}
+      <div className="bg-white rounded-2xl p-6 mb-8 shadow-sm border border-gray-200">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Restaurant</label>
+            <select
+              value={selectedRestoId ?? ''}
+              onChange={(e) => setSelectedRestoId(parseInt(e.target.value))}
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-all duration-200"
             >
-              {/* Header */}
-              <div className="flex items-start justify-between border-b border-gray-100 pb-3">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">#{order.id}</span>
-                    <span className="text-[10px] text-green-700 bg-green-100 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
-                      <PackageCheck className="w-3 h-3" /> Delivered
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-4 text-xs text-gray-600">
-                    <span className="inline-flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {new Date(order.createdAt).toLocaleTimeString()}</span>
-                    <span className="inline-flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> {formatDate(order.createdAt)}</span>
-                  </div>
-                </div>
-                <div className="inline-flex items-center gap-1 text-amber-700 font-semibold text-base">
-                  <IndianRupee className="w-4 h-4" /> {order.totalPrice}
-                </div>
-              </div>
+              {(JSON.parse(localStorage.getItem('allResto_cache') || '[]') as any[]).map(r => (
+                <option key={r.id} value={r.id}>{r.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-all duration-200"
+            />
+          </div>
+        </div>
+      </div>
 
-              {/* Customer */}
-              <div className="mt-3 flex items-start gap-2 text-sm text-gray-700">
-                <User className="w-4 h-4 mt-0.5" />
-                <div>
-                  <div className="font-medium text-gray-900">{order.user?.name || 'User'}</div>
-                  <div className="text-xs text-gray-600">{order.user?.number || '—'}</div>
+      {/* Summary */}
+      <div className="bg-white rounded-2xl p-6 mb-8 shadow-sm border border-gray-200">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="text-center">
+            <div className="flex items-center justify-center w-12 h-12 bg-blue-100 rounded-xl mx-auto mb-3">
+              <Calendar className="w-6 h-6 text-blue-600" />
+            </div>
+            <div className="text-2xl font-bold text-gray-900">
+              {(() => { const [y,m,d] = date.split('-'); return `${d}/${m}/${y}`; })()}
+            </div>
+            <div className="text-sm text-gray-600">Selected Date</div>
+          </div>
+          <div className="text-center">
+            <div className="flex items-center justify-center w-12 h-12 bg-green-100 rounded-xl mx-auto mb-3">
+              <PackageCheck className="w-6 h-6 text-green-600" />
+            </div>
+            <div className="text-2xl font-bold text-gray-900">{orders.length}</div>
+            <div className="text-sm text-gray-600">Delivered Orders</div>
+          </div>
+          <div className="text-center">
+            <div className="flex items-center justify-center w-12 h-12 bg-amber-100 rounded-xl mx-auto mb-3">
+              <IndianRupee className="w-6 h-6 text-amber-600" />
+            </div>
+            <div className="text-2xl font-bold text-gray-900">₹{totalRevenue}</div>
+            <div className="text-sm text-gray-600">Total Revenue</div>
+          </div>
+        </div>
+      </div>
+
+              {loading ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {[...Array(6)].map((_, index) => (
+                    <div key={index} className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 h-80 flex flex-col animate-pulse">
+                      {/* Header Skeleton */}
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-gray-200 rounded-xl"></div>
+                          <div>
+                            <div className="h-5 bg-gray-200 rounded w-24 mb-2"></div>
+                            <div className="h-3 bg-gray-200 rounded w-16"></div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="h-6 bg-gray-200 rounded w-16 mb-2"></div>
+                          <div className="h-4 bg-gray-200 rounded w-20"></div>
+                        </div>
+                      </div>
+
+                      {/* Items Skeleton */}
+                      <div className="flex-1 flex flex-col overflow-hidden">
+                        <div className="space-y-2 flex-1 overflow-hidden">
+                          {[...Array(2)].map((_, itemIndex) => (
+                            <div key={itemIndex} className="flex items-center gap-3 p-2 bg-gray-100 rounded-lg">
+                              <div className="w-10 h-10 bg-gray-200 rounded-lg"></div>
+                              <div className="flex-1 min-w-0">
+                                <div className="h-3 bg-gray-200 rounded w-3/4 mb-1"></div>
+                                <div className="h-2 bg-gray-200 rounded w-1/2"></div>
+                              </div>
+                              <div className="h-3 bg-gray-200 rounded w-10"></div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : orders.length === 0 ? (
+        <div className="text-center text-gray-600">No delivered orders for the selected day.</div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {orders.map((order) => (
+                    <div
+                      key={order.id}
+                      className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 hover:shadow-xl transition-all duration-300 group h-80 flex flex-col"
+                    >
+              {/* Header */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                    <PackageCheck className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <div className="text-lg font-bold text-gray-900">{order.user?.name || 'User'}</div>
+                    <div className="text-xs text-gray-500">
+                      {order.user?.number || 'No number'}
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-2xl font-bold text-amber-600">₹{order.totalPrice}</div>
+                  <div className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full">
+                    Delivered
+                  </div>
                 </div>
               </div>
 
               {/* Items */}
-              <div className={`mt-4 grid grid-cols-1 gap-3 content-start relative ${expanded[order.id] ? '' : 'max-h-28 overflow-hidden'}`}>
-                {order.orderItems.map((oi) => (
-                  <div key={oi.id} className="flex items-center gap-3 border border-gray-200 rounded-xl p-2">
-                    <img
-                      src={oi.menu.imageUrl}
-                      alt={oi.menu.name}
-                      className="w-10 h-10 object-cover rounded-lg border border-gray-200"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-gray-900 text-sm truncate break-words">{oi.menu.name}</div>
-                      <div className="text-[11px] text-gray-600">Qty: {oi.quantity}</div>
+              <div className="flex-1 flex flex-col">
+                <div className="space-y-3 flex-1 overflow-hidden">
+                  {order.orderItems.slice(0, expanded[order.id] ? order.orderItems.length : 3).map((oi) => (
+                    <div key={oi.id} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                      <img
+                        src={oi.menu.imageUrl}
+                        alt={oi.menu.name}
+                        className="w-12 h-12 object-cover rounded-lg border border-gray-200"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-base font-medium text-gray-900 truncate">{oi.menu.name}</div>
+                        <div className="text-sm text-gray-500">Qty: {oi.quantity}</div>
+                      </div>
+                      <div className="text-base font-semibold text-gray-900">₹{oi.menu.price * oi.quantity}</div>
                     </div>
-                    <div className="text-sm font-semibold text-gray-900 whitespace-nowrap flex-shrink-0 ml-2">₹{oi.menu.price * oi.quantity}</div>
+                  ))}
+                </div>
+                
+                {order.orderItems.length > 3 && (
+                  <div className="mt-3 pt-3 border-t border-gray-200">
+                    <button
+                      onClick={() => setExpanded(prev => ({ ...prev, [order.id]: !prev[order.id] }))}
+                      className="w-full text-center text-sm text-amber-600 hover:text-amber-700 font-medium transition-colors duration-200"
+                    >
+                      {expanded[order.id] ? 'Show Less' : `+${order.orderItems.length - 3} More Items`}
+                    </button>
                   </div>
-                ))}
-                {!expanded[order.id] && order.orderItems.length > 2 && (
-                  <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-white to-transparent col-span-2" />
                 )}
               </div>
-
-              {order.orderItems.length > 2 && (
-                <div className="mt-2 text-center">
-                  <button
-                    onClick={() => setExpanded(prev => ({ ...prev, [order.id]: !prev[order.id] }))}
-                    className="text-xs px-3 py-1 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-50"
-                  >
-                    {expanded[order.id] ? 'Show less' : `View full order (+${order.orderItems.length - 2})`}
-                  </button>
-                </div>
-              )}
             </div>
           ))}
         </div>

@@ -102,6 +102,8 @@ const Home: React.FC = () => {
       });
       
       const keysToRemove = sortedKeys.slice(0, cacheKeys.length - 5);
+      console.log(selectedCafe);
+      
       keysToRemove.forEach(key => {
         localStorage.removeItem(key);
         localStorage.removeItem(key.replace('menu_', 'menuVersion_'));
