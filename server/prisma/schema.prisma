@@ -9,15 +9,15 @@ datasource db {
 }
 
 model user {
-  id       Int     @id @default(autoincrement())
   name     String
   email    String  @unique
   password String
   number   BigInt  @unique
-  OTPCode  String?
   isVerify Boolean @default(false)
-  orders   order[]
+  id       Int     @id @default(autoincrement())
+  OTPCode  String?
   balance  Int     @default(0)
+  orders   order[]
 }
 
 model userWallet {
@@ -37,8 +37,9 @@ model resto {
   password    String
   open        Boolean @default(true)
   menuVersion Int     @default(1)
-  menus       menu[]
   ads         ads[]
+  menus       menu[]
+  orders      order[]
 }
 
 model menu {
@@ -51,18 +52,18 @@ model menu {
   veg          Boolean
   category     String
   availability Boolean     @default(true)
+  ads          ads[]
   resto        resto       @relation(fields: [restoId], references: [id])
   orderItems   orderItem[]
-  ads          ads[]
 }
 
 model orderItem {
   id       Int   @id @default(autoincrement())
   orderId  Int
-  order    order @relation(fields: [orderId], references: [id])
   menuId   Int
-  menu     menu  @relation(fields: [menuId], references: [id])
   quantity Int
+  menu     menu  @relation(fields: [menuId], references: [id])
+  order    order @relation(fields: [orderId], references: [id])
 }
 
 model order {
@@ -70,19 +71,21 @@ model order {
   userId        Int
   totalPrice    Int
   status        String      @default("Pending")
-  orderItems    orderItem[]
-  user          user        @relation(fields: [userId], references: [id])
+  createdAt     DateTime    @default(now())
   paymentMethod String
   deliveryType  String
-  createdAt     DateTime    @default(now())
+  restoId       Int
+  resto         resto       @relation(fields: [restoId], references: [id])
+  user          user        @relation(fields: [userId], references: [id])
+  orderItems    orderItem[]
 }
 
 model ads {
   id       Int     @id @default(autoincrement())
   restoId  Int
-  resto    resto   @relation(fields: [restoId], references: [id])
   valid    Boolean @default(true)
   menuId   Int
   discount Int
   menu     menu    @relation(fields: [menuId], references: [id])
+  resto    resto   @relation(fields: [restoId], references: [id])
 }

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-// import RestaurantService from '../../services/restaurantService';
 import { useAuth } from '../../context/AuthContext';
 import { 
   Coffee, 
@@ -26,7 +25,6 @@ interface DashboardStats {
 }
 
 const AdminDashboard: React.FC = () => {
-  // const restaurantService = RestaurantService.getInstance();
   const { logout } = useAuth();
   const [restaurants, setRestaurants] = useState<any[]>([]);
   const [stats, setStats] = useState<DashboardStats>({
@@ -37,7 +35,6 @@ const AdminDashboard: React.FC = () => {
     todayOrders: 0,
     todayRevenue: 0
   });
-  // const [loading, setLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
 
   useEffect(() => {

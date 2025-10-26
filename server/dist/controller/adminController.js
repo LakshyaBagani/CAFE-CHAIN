@@ -69,36 +69,23 @@ exports.allResto = allResto;
 const getRestaurantAnalytics = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { restaurantId } = req.params;
-        const { period = '7d' } = req.query;
         if (!restaurantId) {
-            return res.status(400).send({ success: false, message: 'Restaurant ID is required' });
+            return res
+                .status(400)
+                .send({ success: false, message: "Restaurant ID is required" });
         }
-        // Calculate date range based on period
+        // Calculate date range for last 7 days
         const now = new Date();
-        let startDate;
-        switch (period) {
-            case '7d':
-                startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-                break;
-            case '30d':
-                startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-                break;
-            case '90d':
-                startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-                break;
-            case '1y':
-                startDate = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
-                break;
-            default:
-                startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        }
+        const startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
         // Get restaurant info
         const restaurant = yield db_1.default.resto.findUnique({
             where: { id: parseInt(restaurantId) },
-            select: { id: true, name: true }
+            select: { id: true, name: true },
         });
         if (!restaurant) {
-            return res.status(404).send({ success: false, message: 'Restaurant not found' });
+            return res
+                .status(404)
+                .send({ success: false, message: "Restaurant not found" });
         }
         // Get orders for this restaurant in the specified period
         const orders = yield db_1.default.order.findMany({
@@ -106,44 +93,44 @@ const getRestaurantAnalytics = (req, res) => __awaiter(void 0, void 0, void 0, f
                 orderItems: {
                     some: {
                         menu: {
-                            restoId: parseInt(restaurantId)
-                        }
-                    }
+                            restoId: parseInt(restaurantId),
+                        },
+                    },
                 },
                 createdAt: {
                     gte: startDate,
-                    lte: now
-                }
+                    lte: now,
+                },
             },
             include: {
                 orderItems: {
                     where: {
                         menu: {
-                            restoId: parseInt(restaurantId)
-                        }
+                            restoId: parseInt(restaurantId),
+                        },
                     },
                     include: {
-                        menu: true
-                    }
+                        menu: true,
+                    },
                 },
                 user: {
                     select: {
                         id: true,
                         name: true,
                         email: true,
-                        number: true
-                    }
-                }
+                        number: true,
+                    },
+                },
             },
-            orderBy: { createdAt: 'desc' }
+            orderBy: { createdAt: "desc" },
         });
         // Calculate overview metrics
         const totalRevenue = orders.reduce((sum, order) => {
-            const restaurantOrderTotal = order.orderItems.reduce((itemSum, item) => itemSum + (item.quantity * item.menu.price), 0);
+            const restaurantOrderTotal = order.orderItems.reduce((itemSum, item) => itemSum + item.quantity * item.menu.price, 0);
             return sum + restaurantOrderTotal;
         }, 0);
         const totalOrders = orders.length;
-        const totalCustomers = new Set(orders.map(order => order.user.id)).size;
+        const totalCustomers = new Set(orders.map((order) => order.user.id)).size;
         const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
         // Calculate growth rate (compare with previous period)
         const previousStartDate = new Date(startDate.getTime() - (now.getTime() - startDate.getTime()));
@@ -152,44 +139,46 @@ const getRestaurantAnalytics = (req, res) => __awaiter(void 0, void 0, void 0, f
                 orderItems: {
                     some: {
                         menu: {
-                            restoId: parseInt(restaurantId)
-                        }
-                    }
+                            restoId: parseInt(restaurantId),
+                        },
+                    },
                 },
                 createdAt: {
                     gte: previousStartDate,
-                    lt: startDate
-                }
+                    lt: startDate,
+                },
             },
             include: {
                 orderItems: {
                     where: {
                         menu: {
-                            restoId: parseInt(restaurantId)
-                        }
+                            restoId: parseInt(restaurantId),
+                        },
                     },
                     include: {
-                        menu: true
-                    }
-                }
-            }
+                        menu: true,
+                    },
+                },
+            },
         });
         const previousRevenue = previousOrders.reduce((sum, order) => {
-            const restaurantOrderTotal = order.orderItems.reduce((itemSum, item) => itemSum + (item.quantity * item.menu.price), 0);
+            const restaurantOrderTotal = order.orderItems.reduce((itemSum, item) => itemSum + item.quantity * item.menu.price, 0);
             return sum + restaurantOrderTotal;
         }, 0);
-        const growthRate = previousRevenue > 0 ? ((totalRevenue - previousRevenue) / previousRevenue) * 100 : 0;
+        const growthRate = previousRevenue > 0
+            ? ((totalRevenue - previousRevenue) / previousRevenue) * 100
+            : 0;
         // Get daily sales data
         const dailySalesMap = new Map();
-        orders.forEach(order => {
-            const date = order.createdAt.toISOString().split('T')[0];
-            const orderRevenue = order.orderItems.reduce((sum, item) => sum + (item.quantity * item.menu.price), 0);
+        orders.forEach((order) => {
+            const date = order.createdAt.toISOString().split("T")[0];
+            const orderRevenue = order.orderItems.reduce((sum, item) => sum + item.quantity * item.menu.price, 0);
             if (!dailySalesMap.has(date)) {
                 dailySalesMap.set(date, {
                     date,
                     revenue: 0,
                     orders: 0,
-                    customers: new Set()
+                    customers: new Set(),
                 });
             }
             const dayData = dailySalesMap.get(date);
@@ -197,23 +186,25 @@ const getRestaurantAnalytics = (req, res) => __awaiter(void 0, void 0, void 0, f
             dayData.orders += 1;
             dayData.customers.add(order.user.id);
         });
-        const dailySales = Array.from(dailySalesMap.values()).map(day => ({
+        const dailySales = Array.from(dailySalesMap.values())
+            .map((day) => ({
             date: day.date,
             revenue: day.revenue,
             orders: day.orders,
-            customers: day.customers.size
-        })).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+            customers: day.customers.size,
+        }))
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
         // Get top selling items
         const itemSales = new Map();
-        orders.forEach(order => {
-            order.orderItems.forEach(item => {
+        orders.forEach((order) => {
+            order.orderItems.forEach((item) => {
                 const key = `${item.menu.id}-${item.menu.name}`;
                 if (!itemSales.has(key)) {
                     itemSales.set(key, {
                         id: item.menu.id,
                         name: item.menu.name,
                         quantity: 0,
-                        revenue: 0
+                        revenue: 0,
                     });
                 }
                 const itemData = itemSales.get(key);
@@ -225,13 +216,13 @@ const getRestaurantAnalytics = (req, res) => __awaiter(void 0, void 0, void 0, f
             .sort((a, b) => b.quantity - a.quantity)
             .slice(0, 5);
         // Get customer metrics
-        const allCustomers = new Set(orders.map(order => order.user.id));
+        const allCustomers = new Set(orders.map((order) => order.user.id));
         const newCustomers = new Set();
         const returningCustomers = new Set();
         // Check if customers are new or returning
         for (const customerId of allCustomers) {
-            const customerOrders = orders.filter(order => order.user.id === customerId);
-            const firstOrderDate = new Date(Math.min(...customerOrders.map(order => order.createdAt.getTime())));
+            const customerOrders = orders.filter((order) => order.user.id === customerId);
+            const firstOrderDate = new Date(Math.min(...customerOrders.map((order) => order.createdAt.getTime())));
             if (firstOrderDate >= startDate) {
                 newCustomers.add(customerId);
             }
@@ -247,7 +238,7 @@ const getRestaurantAnalytics = (req, res) => __awaiter(void 0, void 0, void 0, f
                     totalOrders,
                     totalCustomers,
                     averageOrderValue,
-                    growthRate: Math.round(growthRate * 100) / 100
+                    growthRate: Math.round(growthRate * 100) / 100,
                 },
                 dailySales,
                 topSellingItems,
@@ -255,47 +246,34 @@ const getRestaurantAnalytics = (req, res) => __awaiter(void 0, void 0, void 0, f
                     newCustomers: newCustomers.size,
                     returningCustomers: returningCustomers.size,
                     averageSessionTime: 25, // Mock data - would need session tracking
-                    customerSatisfaction: 4.6 // Mock data - would need rating system
-                }
-            }
+                    customerSatisfaction: 4.6, // Mock data - would need rating system
+                },
+            },
         });
     }
     catch (error) {
-        console.error('Restaurant analytics error:', error);
-        return res.status(500).send({ success: false, message: 'Failed to fetch restaurant analytics' });
+        console.error("Restaurant analytics error:", error);
+        return res
+            .status(500)
+            .send({
+            success: false,
+            message: "Failed to fetch restaurant analytics",
+        });
     }
 });
 exports.getRestaurantAnalytics = getRestaurantAnalytics;
-// Get admin analytics data for all restaurants
 const getAdminAnalytics = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { period = '7d' } = req.query;
-        // Calculate date range based on period
+        // Calculate date range for last 7 days
         const now = new Date();
-        let startDate;
-        switch (period) {
-            case '7d':
-                startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-                break;
-            case '30d':
-                startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-                break;
-            case '90d':
-                startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-                break;
-            case '1y':
-                startDate = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
-                break;
-            default:
-                startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        }
+        const startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
         // Get all orders in the specified period
         const orders = yield db_1.default.order.findMany({
             where: {
                 createdAt: {
                     gte: startDate,
-                    lte: now
-                }
+                    lte: now,
+                },
             },
             include: {
                 orderItems: {
@@ -305,23 +283,23 @@ const getAdminAnalytics = (req, res) => __awaiter(void 0, void 0, void 0, functi
                                 resto: {
                                     select: {
                                         id: true,
-                                        name: true
-                                    }
-                                }
-                            }
-                        }
-                    }
+                                        name: true,
+                                    },
+                                },
+                            },
+                        },
+                    },
                 },
                 user: {
                     select: {
                         id: true,
                         name: true,
                         email: true,
-                        number: true
-                    }
-                }
+                        number: true,
+                    },
+                },
             },
-            orderBy: { createdAt: 'desc' }
+            orderBy: { createdAt: "desc" },
         });
         // Calculate total metrics
         const totalRevenue = orders.reduce((sum, order) => sum + order.totalPrice, 0);
@@ -329,31 +307,32 @@ const getAdminAnalytics = (req, res) => __awaiter(void 0, void 0, void 0, functi
         const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
         // Get daily revenue data
         const dailyRevenueMap = new Map();
-        orders.forEach(order => {
-            const date = order.createdAt.toISOString().split('T')[0];
+        orders.forEach((order) => {
+            const date = order.createdAt.toISOString().split("T")[0];
             if (!dailyRevenueMap.has(date)) {
                 dailyRevenueMap.set(date, {
                     date,
                     revenue: 0,
-                    orders: 0
+                    orders: 0,
                 });
             }
             const dayData = dailyRevenueMap.get(date);
             dayData.revenue += order.totalPrice;
             dayData.orders += 1;
         });
-        const dailyRevenue = Array.from(dailyRevenueMap.values())
-            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        const dailyRevenue = Array.from(dailyRevenueMap.values()).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
         // Get monthly revenue data (last 6 months)
         const monthlyRevenueMap = new Map();
-        orders.forEach(order => {
+        orders.forEach((order) => {
             const monthKey = order.createdAt.toISOString().substring(0, 7); // YYYY-MM
-            const monthName = new Date(order.createdAt).toLocaleDateString('en-US', { month: 'short' });
+            const monthName = new Date(order.createdAt).toLocaleDateString("en-US", {
+                month: "short",
+            });
             if (!monthlyRevenueMap.has(monthKey)) {
                 monthlyRevenueMap.set(monthKey, {
                     month: monthName,
                     revenue: 0,
-                    orders: 0
+                    orders: 0,
                 });
             }
             const monthData = monthlyRevenueMap.get(monthKey);
@@ -362,13 +341,26 @@ const getAdminAnalytics = (req, res) => __awaiter(void 0, void 0, void 0, functi
         });
         const monthlyRevenue = Array.from(monthlyRevenueMap.values())
             .sort((a, b) => {
-            const monthOrder = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const monthOrder = [
+                "Jan",
+                "Feb",
+                "Mar",
+                "Apr",
+                "May",
+                "Jun",
+                "Jul",
+                "Aug",
+                "Sep",
+                "Oct",
+                "Nov",
+                "Dec",
+            ];
             return monthOrder.indexOf(a.month) - monthOrder.indexOf(b.month);
         })
             .slice(-6); // Last 6 months
         // Get top restaurants by revenue
         const restaurantRevenueMap = new Map();
-        orders.forEach(order => {
+        orders.forEach((order) => {
             // Get restaurant info from the first order item
             if (order.orderItems.length > 0) {
                 const restaurantId = order.orderItems[0].menu.resto.id;
@@ -379,7 +371,7 @@ const getAdminAnalytics = (req, res) => __awaiter(void 0, void 0, void 0, functi
                         name: restaurantName,
                         revenue: 0,
                         orders: 0,
-                        rating: 4.5 // Mock rating - would need rating system
+                        rating: 4.5, // Mock rating - would need rating system
                     });
                 }
                 const restaurantData = restaurantRevenueMap.get(restaurantId);
@@ -399,13 +391,15 @@ const getAdminAnalytics = (req, res) => __awaiter(void 0, void 0, void 0, functi
                 averageOrderValue,
                 topRestaurants,
                 dailyRevenue,
-                monthlyRevenue
-            }
+                monthlyRevenue,
+            },
         });
     }
     catch (error) {
-        console.error('Admin analytics error:', error);
-        return res.status(500).send({ success: false, message: 'Failed to fetch admin analytics' });
+        console.error("Admin analytics error:", error);
+        return res
+            .status(500)
+            .send({ success: false, message: "Failed to fetch admin analytics" });
     }
 });
 exports.getAdminAnalytics = getAdminAnalytics;
@@ -621,9 +615,7 @@ const deliveredOrdersForDay = (req, res) => __awaiter(void 0, void 0, void 0, fu
             return (Object.assign(Object.assign({}, o), { user: o.user
                     ? Object.assign(Object.assign({}, o.user), { number: (_c = (_b = (_a = o.user) === null || _a === void 0 ? void 0 : _a.number) === null || _b === void 0 ? void 0 : _b.toString) === null || _c === void 0 ? void 0 : _c.call(_b) }) : o.user }));
         });
-        return res
-            .status(200)
-            .send({
+        return res.status(200).send({
             success: true,
             message: "Delivered orders fetched successfully",
             orders: safeOrders,
@@ -726,9 +718,7 @@ const changeMenuStatus = (req, res) => __awaiter(void 0, void 0, void 0, functio
                 where: { id: parseInt(actualRestoId) },
                 data: { menuVersion: resto.menuVersion + 1 },
             });
-            return res
-                .status(200)
-                .send({
+            return res.status(200).send({
                 success: true,
                 message: "Menu availability changed successfully",
                 menu,
@@ -820,9 +810,7 @@ const changeOrderStatus = (req, res) => __awaiter(void 0, void 0, void 0, functi
             where: { id: parseInt(orderId) },
             data: { status },
         });
-        return res
-            .status(200)
-            .send({
+        return res.status(200).send({
             success: true,
             message: "Order status changed successfully",
             order,

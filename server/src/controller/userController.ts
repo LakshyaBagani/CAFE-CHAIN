@@ -13,7 +13,7 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
     }
 
     const order = await prisma.order.create({
-      data: { userId, totalPrice: parseInt(totalPrice) , paymentMethod , deliveryType },
+      data: { userId, totalPrice: parseInt(totalPrice) , paymentMethod , deliveryType , restoId: parseInt(restoId) },
     });
 
     for(let i = 0; i < orderItems.length; i++){

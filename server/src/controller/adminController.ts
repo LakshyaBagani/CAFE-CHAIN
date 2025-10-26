@@ -45,10 +45,60 @@ export const allResto = async (req: Request, res: Response) => {
         .status(400)
         .send({ success: false, message: "No resto found" });
     }
+
+    // Get today's date for daily stats
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+
+    // Create date range for the day
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+
+    // Get daily stats for all restaurants in a single query
+    const dailyStats = await prisma.order.groupBy({
+      by: ['restoId'],
+      where: {
+        createdAt: {
+          gte: startOfDay,
+          lt: endOfDay,
+        },
+        status: 'delivered'
+      },
+      _count: {
+        id: true
+      },
+      _sum: {
+        totalPrice: true
+      }
+    });
+
+    // Create a map for quick lookup
+    const statsMap = new Map();
+    dailyStats.forEach(stat => {
+      statsMap.set(stat.restoId, {
+        orderCount: stat._count.id || 0,
+        totalRevenue: Number(stat._sum.totalPrice) || 0,
+        date: dateStr
+      });
+    });
+
+    // Add daily stats to each restaurant
+    const restoWithStats = resto.map(restaurant => ({
+      ...restaurant,
+      dailyStats: statsMap.get(restaurant.id) || {
+        orderCount: 0,
+        totalRevenue: 0,
+        date: dateStr
+      }
+    }));
+
     return res.status(200).send({
       success: true,
       message: "All resto fetched successfully",
-      resto,
+      resto: restoWithStats,
     });
   } catch (error) {
     return res.status(500).send({ success: false, message: error });
@@ -60,7 +110,9 @@ export const getRestaurantAnalytics = async (req: Request, res: Response) => {
     const { restaurantId } = req.params;
 
     if (!restaurantId) {
-      return res.status(400).send({ success: false, message: 'Restaurant ID is required' });
+      return res
+        .status(400)
+        .send({ success: false, message: "Restaurant ID is required" });
     }
 
     // Calculate date range for last 7 days
@@ -70,11 +122,13 @@ export const getRestaurantAnalytics = async (req: Request, res: Response) => {
     // Get restaurant info
     const restaurant = await prisma.resto.findUnique({
       where: { id: parseInt(restaurantId) },
-      select: { id: true, name: true }
+      select: { id: true, name: true },
     });
 
     if (!restaurant) {
-      return res.status(404).send({ success: false, message: 'Restaurant not found' });
+      return res
+        .status(404)
+        .send({ success: false, message: "Restaurant not found" });
     }
 
     // Get orders for this restaurant in the specified period
@@ -83,124 +137,140 @@ export const getRestaurantAnalytics = async (req: Request, res: Response) => {
         orderItems: {
           some: {
             menu: {
-              restoId: parseInt(restaurantId)
-            }
-          }
+              restoId: parseInt(restaurantId),
+            },
+          },
         },
         createdAt: {
           gte: startDate,
-          lte: now
-        }
+          lte: now,
+        },
       },
       include: {
         orderItems: {
           where: {
             menu: {
-              restoId: parseInt(restaurantId)
-            }
+              restoId: parseInt(restaurantId),
+            },
           },
           include: {
-            menu: true
-          }
+            menu: true,
+          },
         },
         user: {
           select: {
             id: true,
             name: true,
             email: true,
-            number: true
-          }
-        }
+            number: true,
+          },
+        },
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: "desc" },
     });
 
     // Calculate overview metrics
     const totalRevenue = orders.reduce((sum, order) => {
-      const restaurantOrderTotal = order.orderItems.reduce((itemSum, item) => itemSum + (item.quantity * item.menu.price), 0);
+      const restaurantOrderTotal = order.orderItems.reduce(
+        (itemSum, item) => itemSum + item.quantity * item.menu.price,
+        0
+      );
       return sum + restaurantOrderTotal;
     }, 0);
 
     const totalOrders = orders.length;
-    const totalCustomers = new Set(orders.map(order => order.user.id)).size;
+    const totalCustomers = new Set(orders.map((order) => order.user.id)).size;
     const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
     // Calculate growth rate (compare with previous period)
-    const previousStartDate = new Date(startDate.getTime() - (now.getTime() - startDate.getTime()));
+    const previousStartDate = new Date(
+      startDate.getTime() - (now.getTime() - startDate.getTime())
+    );
     const previousOrders = await prisma.order.findMany({
       where: {
         orderItems: {
           some: {
             menu: {
-              restoId: parseInt(restaurantId)
-            }
-          }
+              restoId: parseInt(restaurantId),
+            },
+          },
         },
         createdAt: {
           gte: previousStartDate,
-          lt: startDate
-        }
+          lt: startDate,
+        },
       },
       include: {
         orderItems: {
           where: {
             menu: {
-              restoId: parseInt(restaurantId)
-            }
+              restoId: parseInt(restaurantId),
+            },
           },
           include: {
-            menu: true
-          }
-        }
-      }
+            menu: true,
+          },
+        },
+      },
     });
 
     const previousRevenue = previousOrders.reduce((sum, order) => {
-      const restaurantOrderTotal = order.orderItems.reduce((itemSum, item) => itemSum + (item.quantity * item.menu.price), 0);
+      const restaurantOrderTotal = order.orderItems.reduce(
+        (itemSum, item) => itemSum + item.quantity * item.menu.price,
+        0
+      );
       return sum + restaurantOrderTotal;
     }, 0);
 
-    const growthRate = previousRevenue > 0 ? ((totalRevenue - previousRevenue) / previousRevenue) * 100 : 0;
+    const growthRate =
+      previousRevenue > 0
+        ? ((totalRevenue - previousRevenue) / previousRevenue) * 100
+        : 0;
 
     // Get daily sales data
     const dailySalesMap = new Map();
-    orders.forEach(order => {
-      const date = order.createdAt.toISOString().split('T')[0];
-      const orderRevenue = order.orderItems.reduce((sum, item) => sum + (item.quantity * item.menu.price), 0);
-      
+    orders.forEach((order) => {
+      const date = order.createdAt.toISOString().split("T")[0];
+      const orderRevenue = order.orderItems.reduce(
+        (sum, item) => sum + item.quantity * item.menu.price,
+        0
+      );
+
       if (!dailySalesMap.has(date)) {
         dailySalesMap.set(date, {
           date,
           revenue: 0,
           orders: 0,
-          customers: new Set()
+          customers: new Set(),
         });
       }
-      
+
       const dayData = dailySalesMap.get(date);
       dayData.revenue += orderRevenue;
       dayData.orders += 1;
       dayData.customers.add(order.user.id);
     });
 
-    const dailySales = Array.from(dailySalesMap.values()).map(day => ({
-      date: day.date,
-      revenue: day.revenue,
-      orders: day.orders,
-      customers: day.customers.size
-    })).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const dailySales = Array.from(dailySalesMap.values())
+      .map((day) => ({
+        date: day.date,
+        revenue: day.revenue,
+        orders: day.orders,
+        customers: day.customers.size,
+      }))
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     // Get top selling items
     const itemSales = new Map();
-    orders.forEach(order => {
-      order.orderItems.forEach(item => {
+    orders.forEach((order) => {
+      order.orderItems.forEach((item) => {
         const key = `${item.menu.id}-${item.menu.name}`;
         if (!itemSales.has(key)) {
           itemSales.set(key, {
             id: item.menu.id,
             name: item.menu.name,
             quantity: 0,
-            revenue: 0
+            revenue: 0,
           });
         }
         const itemData = itemSales.get(key);
@@ -214,15 +284,19 @@ export const getRestaurantAnalytics = async (req: Request, res: Response) => {
       .slice(0, 5);
 
     // Get customer metrics
-    const allCustomers = new Set(orders.map(order => order.user.id));
+    const allCustomers = new Set(orders.map((order) => order.user.id));
     const newCustomers = new Set();
     const returningCustomers = new Set();
 
     // Check if customers are new or returning
     for (const customerId of allCustomers) {
-      const customerOrders = orders.filter(order => order.user.id === customerId);
-      const firstOrderDate = new Date(Math.min(...customerOrders.map(order => order.createdAt.getTime())));
-      
+      const customerOrders = orders.filter(
+        (order) => order.user.id === customerId
+      );
+      const firstOrderDate = new Date(
+        Math.min(...customerOrders.map((order) => order.createdAt.getTime()))
+      );
+
       if (firstOrderDate >= startDate) {
         newCustomers.add(customerId);
       } else {
@@ -238,7 +312,7 @@ export const getRestaurantAnalytics = async (req: Request, res: Response) => {
           totalOrders,
           totalCustomers,
           averageOrderValue,
-          growthRate: Math.round(growthRate * 100) / 100
+          growthRate: Math.round(growthRate * 100) / 100,
         },
         dailySales,
         topSellingItems,
@@ -246,17 +320,21 @@ export const getRestaurantAnalytics = async (req: Request, res: Response) => {
           newCustomers: newCustomers.size,
           returningCustomers: returningCustomers.size,
           averageSessionTime: 25, // Mock data - would need session tracking
-          customerSatisfaction: 4.6 // Mock data - would need rating system
-        }
-      }
+          customerSatisfaction: 4.6, // Mock data - would need rating system
+        },
+      },
     });
   } catch (error) {
-    console.error('Restaurant analytics error:', error);
-    return res.status(500).send({ success: false, message: 'Failed to fetch restaurant analytics' });
+    console.error("Restaurant analytics error:", error);
+    return res
+      .status(500)
+      .send({
+        success: false,
+        message: "Failed to fetch restaurant analytics",
+      });
   }
 };
 
-// Get admin analytics data for all restaurants
 export const getAdminAnalytics = async (req: Request, res: Response) => {
   try {
     // Calculate date range for last 7 days
@@ -268,8 +346,8 @@ export const getAdminAnalytics = async (req: Request, res: Response) => {
       where: {
         createdAt: {
           gte: startDate,
-          lte: now
-        }
+          lte: now,
+        },
       },
       include: {
         orderItems: {
@@ -279,39 +357,42 @@ export const getAdminAnalytics = async (req: Request, res: Response) => {
                 resto: {
                   select: {
                     id: true,
-                    name: true
-                  }
-                }
-              }
-            }
-          }
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
         },
         user: {
           select: {
             id: true,
             name: true,
             email: true,
-            number: true
-          }
-        }
+            number: true,
+          },
+        },
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: "desc" },
     });
 
     // Calculate total metrics
-    const totalRevenue = orders.reduce((sum, order) => sum + order.totalPrice, 0);
+    const totalRevenue = orders.reduce(
+      (sum, order) => sum + order.totalPrice,
+      0
+    );
     const totalOrders = orders.length;
     const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
     // Get daily revenue data
     const dailyRevenueMap = new Map();
-    orders.forEach(order => {
-      const date = order.createdAt.toISOString().split('T')[0];
+    orders.forEach((order) => {
+      const date = order.createdAt.toISOString().split("T")[0];
       if (!dailyRevenueMap.has(date)) {
         dailyRevenueMap.set(date, {
           date,
           revenue: 0,
-          orders: 0
+          orders: 0,
         });
       }
       const dayData = dailyRevenueMap.get(date);
@@ -319,20 +400,23 @@ export const getAdminAnalytics = async (req: Request, res: Response) => {
       dayData.orders += 1;
     });
 
-    const dailyRevenue = Array.from(dailyRevenueMap.values())
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const dailyRevenue = Array.from(dailyRevenueMap.values()).sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
 
     // Get monthly revenue data (last 6 months)
     const monthlyRevenueMap = new Map();
-    orders.forEach(order => {
+    orders.forEach((order) => {
       const monthKey = order.createdAt.toISOString().substring(0, 7); // YYYY-MM
-      const monthName = new Date(order.createdAt).toLocaleDateString('en-US', { month: 'short' });
-      
+      const monthName = new Date(order.createdAt).toLocaleDateString("en-US", {
+        month: "short",
+      });
+
       if (!monthlyRevenueMap.has(monthKey)) {
         monthlyRevenueMap.set(monthKey, {
           month: monthName,
           revenue: 0,
-          orders: 0
+          orders: 0,
         });
       }
       const monthData = monthlyRevenueMap.get(monthKey);
@@ -342,26 +426,39 @@ export const getAdminAnalytics = async (req: Request, res: Response) => {
 
     const monthlyRevenue = Array.from(monthlyRevenueMap.values())
       .sort((a, b) => {
-        const monthOrder = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const monthOrder = [
+          "Jan",
+          "Feb",
+          "Mar",
+          "Apr",
+          "May",
+          "Jun",
+          "Jul",
+          "Aug",
+          "Sep",
+          "Oct",
+          "Nov",
+          "Dec",
+        ];
         return monthOrder.indexOf(a.month) - monthOrder.indexOf(b.month);
       })
       .slice(-6); // Last 6 months
 
     // Get top restaurants by revenue
     const restaurantRevenueMap = new Map();
-    orders.forEach(order => {
+    orders.forEach((order) => {
       // Get restaurant info from the first order item
       if (order.orderItems.length > 0) {
         const restaurantId = order.orderItems[0].menu.resto.id;
         const restaurantName = order.orderItems[0].menu.resto.name;
-        
+
         if (!restaurantRevenueMap.has(restaurantId)) {
           restaurantRevenueMap.set(restaurantId, {
             id: restaurantId,
             name: restaurantName,
             revenue: 0,
             orders: 0,
-            rating: 4.5 // Mock rating - would need rating system
+            rating: 4.5, // Mock rating - would need rating system
           });
         }
         const restaurantData = restaurantRevenueMap.get(restaurantId);
@@ -383,12 +480,14 @@ export const getAdminAnalytics = async (req: Request, res: Response) => {
         averageOrderValue,
         topRestaurants,
         dailyRevenue,
-        monthlyRevenue
-      }
+        monthlyRevenue,
+      },
     });
   } catch (error) {
-    console.error('Admin analytics error:', error);
-    return res.status(500).send({ success: false, message: 'Failed to fetch admin analytics' });
+    console.error("Admin analytics error:", error);
+    return res
+      .status(500)
+      .send({ success: false, message: "Failed to fetch admin analytics" });
   }
 };
 
@@ -552,7 +651,19 @@ export const restoOrderHistory = async (req: Request, res: Response) => {
         .send({ success: false, message: "Date is required" });
     }
 
+    // Parse the date and create date range for the day
+    const targetDate = new Date(date);
+    const startOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+    const endOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate() + 1);
+
     const orders = await prisma.order.findMany({
+      where: {
+        restoId: parseInt(restoId),
+        createdAt: {
+          gte: startOfDay,
+          lt: endOfDay,
+        },
+      },
       include: {
         orderItems: {
           include: {
@@ -568,25 +679,13 @@ export const restoOrderHistory = async (req: Request, res: Response) => {
           },
         },
       },
-    });
-
-    const restaurantOrders = orders.filter((order) =>
-      order.orderItems.some((item) => item.menu.restoId === parseInt(restoId))
-    );
-
-    const dateFilteredOrders = restaurantOrders.filter((order) => {
-      // Use UTC date formatting to match database timezone
-      const orderDate = new Date(order.createdAt);
-      const year = orderDate.getUTCFullYear();
-      const month = String(orderDate.getUTCMonth() + 1).padStart(2, "0");
-      const day = String(orderDate.getUTCDate()).padStart(2, "0");
-      const formattedOrderDate = `${year}-${month}-${day}`;
-
-      return formattedOrderDate === date;
+      orderBy: {
+        createdAt: 'desc'
+      }
     });
 
     // Convert BigInt to string for JSON safety
-    const safeOrders = dateFilteredOrders.map((o: any) => ({
+    const safeOrders = orders.map((o: any) => ({
       ...o,
       user: o.user
         ? { ...o.user, number: o.user?.number?.toString?.() }
@@ -620,11 +719,9 @@ export const deliveredOrdersForDay = async (req: Request, res: Response) => {
 
     const orders = await prisma.order.findMany({
       where: {
+        restoId: parseInt(restoId),
         status: "Delivered",
         createdAt: { gte: startDate, lt: endDate },
-        orderItems: {
-          some: { menu: { restoId: parseInt(restoId) } },
-        },
       },
       include: {
         orderItems: { include: { menu: true } },
@@ -640,13 +737,11 @@ export const deliveredOrdersForDay = async (req: Request, res: Response) => {
         : o.user,
     }));
 
-    return res
-      .status(200)
-      .send({
-        success: true,
-        message: "Delivered orders fetched successfully",
-        orders: safeOrders,
-      });
+    return res.status(200).send({
+      success: true,
+      message: "Delivered orders fetched successfully",
+      orders: safeOrders,
+    });
   } catch (error) {
     return res.status(500).send({ success: false, message: error });
   }
@@ -752,13 +847,11 @@ export const changeMenuStatus = async (req: Request, res: Response) => {
         data: { menuVersion: resto.menuVersion + 1 },
       });
 
-      return res
-        .status(200)
-        .send({
-          success: true,
-          message: "Menu availability changed successfully",
-          menu,
-        });
+      return res.status(200).send({
+        success: true,
+        message: "Menu availability changed successfully",
+        menu,
+      });
     }
 
     // Handle order status change (existing functionality)
@@ -810,6 +903,7 @@ export const getMenuVersion = async (req: Request, res: Response) => {
     return res.status(500).send({ success: false, message: error });
   }
 };
+
 export const resoStatus = async (req: Request, res: Response) => {
   try {
     const { restoId } = req.params;
@@ -833,6 +927,7 @@ export const resoStatus = async (req: Request, res: Response) => {
     return res.status(500).send({ success: false, message: error });
   }
 };
+
 export const changeOrderStatus = async (req: Request, res: Response) => {
   try {
     const { orderId, status } = req.body;
@@ -845,13 +940,11 @@ export const changeOrderStatus = async (req: Request, res: Response) => {
       where: { id: parseInt(orderId) },
       data: { status },
     });
-    return res
-      .status(200)
-      .send({
-        success: true,
-        message: "Order status changed successfully",
-        order,
-      });
+    return res.status(200).send({
+      success: true,
+      message: "Order status changed successfully",
+      order,
+    });
   } catch (error) {
     return res.status(500).send({ success: false, message: error });
   }

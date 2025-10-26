@@ -9,14 +9,11 @@ import {
   Phone, 
   Plus, 
   Power, 
-  Utensils, 
   Star,
   Calendar,
   Search,
   Filter,
-  ArrowLeft,
-  X,
-  Upload
+  ArrowLeft
 } from 'lucide-react';
 
 
@@ -34,17 +31,6 @@ const AdminRestaurants: React.FC = () => {
     number: ''
   });
   const [isAdding, setIsAdding] = useState(false);
-  const [showAddMenuModal, setShowAddMenuModal] = useState(false);
-  const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
-  const [newMenuItem, setNewMenuItem] = useState({
-    name: '',
-    price: '',
-    description: '',
-    type: 'Veg',
-    category: ''
-  });
-  const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [isAddingMenu, setIsAddingMenu] = useState(false);
   const [isChangingStatus, setIsChangingStatus] = useState<number | null>(null);
   const [dailyStats, setDailyStats] = useState<Record<number, { orderCount: number; totalRevenue: number; date: string }>>({});
 
@@ -57,29 +43,14 @@ const AdminRestaurants: React.FC = () => {
       const restaurantsData = await restaurantService.getRestaurants();
       setRestaurants(restaurantsData);
 
-      // After restaurants load, fetch today's stats for each
-      const today = new Date();
-      const year = today.getFullYear();
-      const month = String(today.getMonth() + 1).padStart(2, '0');
-      const day = String(today.getDate()).padStart(2, '0');
-      const dateStr = `${year}-${month}-${day}`;
-
-      const statsEntries = await Promise.all(
-        restaurantsData.map(async (r) => {
-          try {
-            const resp = await axios.post(`https://cafe-chain.onrender.com/admin/resto/${r.id}/orderHistory`, { date: dateStr }, { withCredentials: true });
-            if (resp.data?.success && Array.isArray(resp.data.orders)) {
-              const orders = resp.data.orders;
-              const total = orders.reduce((s: number, o: any) => s + (o.totalPrice || 0), 0);
-              return [r.id, { orderCount: orders.length, totalRevenue: total, date: dateStr }] as const;
-            }
-          } catch {}
-          return [r.id, { orderCount: 0, totalRevenue: 0, date: dateStr }] as const;
-        })
-      );
+      // Extract daily stats from the restaurant data (now included in the same response)
+      const statsEntries = restaurantsData.map((r: any) => [
+        r.id, 
+        r.dailyStats || { orderCount: 0, totalRevenue: 0, date: new Date().toISOString().slice(0,10) }
+      ] as const);
       setDailyStats(Object.fromEntries(statsEntries));
       
-      // Show success toast only after all data is loaded
+      // Show success toast
       const { showToast } = await import('../../utils/toast');
       showToast('Restaurants loaded successfully', 'success');
     } catch (error: any) {
@@ -173,60 +144,6 @@ const AdminRestaurants: React.FC = () => {
 
 
 
-  const handleAddMenuItem = async () => {
-    if (!selectedRestaurant || !selectedImage) {
-      const { showToast } = await import('../../utils/toast');
-      showToast('Please fill all fields and select an image', 'warning');
-      return;
-    }
-
-    try {
-      setIsAddingMenu(true);
-      
-      const formData = new FormData();
-      formData.append('name', newMenuItem.name);
-      formData.append('price', newMenuItem.price);
-      formData.append('description', newMenuItem.description);
-      formData.append('type', newMenuItem.type);
-      formData.append('category', newMenuItem.category);
-      formData.append('image', selectedImage);
-
-      const response = await axios.post(
-        `https://cafe-chain.onrender.com/admin/resto/${selectedRestaurant.id}/addMenu`,
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-          withCredentials: true
-        }
-      );
-
-      if (response.data.success) {
-        const { showToast } = await import('../../utils/toast');
-        setShowAddMenuModal(false);
-        setNewMenuItem({
-          name: '',
-          price: '',
-          description: '',
-          type: 'Veg',
-          category: ''
-        });
-        setSelectedImage(null);
-        setSelectedRestaurant(null);
-        showToast('Menu item added successfully!', 'success');
-      } else {
-        const { showToast } = await import('../../utils/toast');
-        showToast('Failed to add menu item', 'error');
-      }
-    } catch (error: any) {
-      console.error('Failed to add menu item:', error);
-      const { showToast } = await import('../../utils/toast');
-      showToast('Failed to add menu item', 'error');
-    } finally {
-      setIsAddingMenu(false);
-    }
-  };
 
   const filteredRestaurants = restaurants.filter(restaurant =>
     restaurant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -506,168 +423,6 @@ const AdminRestaurants: React.FC = () => {
         </div>
       )}
 
-      {/* Add Menu Modal */}
-      {showAddMenuModal && selectedRestaurant && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">
-                Add Menu Item - {selectedRestaurant.name}
-              </h3>
-              <button
-                onClick={() => setShowAddMenuModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <form onSubmit={(e) => { e.preventDefault(); handleAddMenuItem(); }} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Item Name
-                </label>
-                <input
-                  type="text"
-                  value={newMenuItem.name}
-                  onChange={(e) => setNewMenuItem(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                  placeholder="Enter item name"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Price (₹)
-                </label>
-                <input
-                  type="number"
-                  value={newMenuItem.price}
-                  onChange={(e) => setNewMenuItem(prev => ({ ...prev, price: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                  placeholder="Enter price"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description
-                </label>
-                <textarea
-                  value={newMenuItem.description}
-                  onChange={(e) => setNewMenuItem(prev => ({ ...prev, description: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                  placeholder="Enter description"
-                  rows={3}
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Type
-                  </label>
-                  <select
-                    value={newMenuItem.type}
-                    onChange={(e) => setNewMenuItem(prev => ({ ...prev, type: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                  >
-                    <option value="Veg">Veg</option>
-                    <option value="Non-Veg">Non-Veg</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Category
-                  </label>
-                  <select
-                    value={newMenuItem.category}
-                    onChange={(e) => setNewMenuItem(prev => ({ ...prev, category: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                    required
-                  >
-                    <option value="">Select Category</option>
-                    <option value="Roll">Roll</option>
-                    <option value="Burger">Burger</option>
-                    <option value="Sandwich">Sandwich</option>
-                    <option value="Omelette">Omelette</option>
-                    <option value="Maggie">Maggie</option>
-                    <option value="Mocktail">Mocktail</option>
-                    <option value="Fries">Fries</option>
-                    <option value="Drinks">Drinks</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Image
-                </label>
-                <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg">
-                  <div className="space-y-1 text-center">
-                    <Upload className="mx-auto h-12 w-12 text-gray-400" />
-                    <div className="flex text-sm text-gray-600">
-                      <label className="relative cursor-pointer bg-white rounded-md font-medium text-amber-600 hover:text-amber-500">
-                        <span>Upload a file</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => setSelectedImage(e.target.files?.[0] || null)}
-                          className="sr-only"
-                          required
-                        />
-                      </label>
-                      <p className="pl-1">or drag and drop</p>
-                    </div>
-                    <p className="text-xs text-gray-500">PNG, JPG, GIF up to 5MB</p>
-                    {selectedImage && (
-                      <div className="mt-2">
-                        <p className="text-sm text-green-600 mb-2">Selected: {selectedImage.name}</p>
-                        <img 
-                          src={URL.createObjectURL(selectedImage)} 
-                          alt="Preview" 
-                          className="mx-auto h-24 w-24 object-cover rounded-lg border border-gray-300"
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowAddMenuModal(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isAddingMenu}
-                  className="flex-1 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center space-x-2"
-                >
-                  {isAddingMenu ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      <span>Adding...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Utensils className="h-4 w-4" />
-                      <span>Add Menu Item</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

@@ -34,7 +34,7 @@ const createOrder = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             return res.status(400).send({ success: false, message: "All fields are required" });
         }
         const order = yield db_1.default.order.create({
-            data: { userId, totalPrice: parseInt(totalPrice), paymentMethod, deliveryType },
+            data: { userId, totalPrice: parseInt(totalPrice), paymentMethod, deliveryType, restoId: parseInt(restoId) },
         });
         for (let i = 0; i < orderItems.length; i++) {
             const { dishName, quantity } = orderItems[i];

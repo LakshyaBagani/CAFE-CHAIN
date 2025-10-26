@@ -10,13 +10,16 @@ export interface Restaurant {
   totalRevenue: number;
   rating: number;
   isActive: boolean;
+  dailyStats?: {
+    orderCount: number;
+    totalRevenue: number;
+    date: string;
+  };
 }
 
 class RestaurantService {
   private static instance: RestaurantService;
   private restaurants: Restaurant[] = [];
-  private lastFetch: number = 0;
-  private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
   private constructor() {}
 
@@ -27,40 +30,7 @@ class RestaurantService {
     return RestaurantService.instance;
   }
 
-  async getRestaurants(forceRefresh: boolean = false): Promise<Restaurant[]> {
-    const now = Date.now();
-    
-    // Return cached data if it's fresh and not forcing refresh
-    if (!forceRefresh && this.restaurants.length > 0 && (now - this.lastFetch) < this.CACHE_DURATION) {
-      return this.restaurants;
-    }
-
-    // Try localStorage cache first
-    const cached = localStorage.getItem('allResto_cache');
-    const cachedAt = localStorage.getItem('allResto_cache_ts');
-    
-    if (cached && cachedAt && !forceRefresh) {
-      try {
-        const cacheAge = Date.now() - parseInt(cachedAt);
-        if (cacheAge < 24 * 60 * 60 * 1000) { // 24 hours
-          const cachedResto = JSON.parse(cached);
-          this.restaurants = cachedResto.map((resto: any) => ({
-            id: resto.id,
-            name: resto.name,
-            location: resto.location,
-            number: resto.number,
-            createdAt: resto.createdAt,
-            totalOrders: Math.floor(Math.random() * 100) + 10,
-            totalRevenue: Math.floor(Math.random() * 5000) + 1000,
-            rating: 4.0 + Math.random() * 1.0,
-            isActive: resto.open || false
-          }));
-          this.lastFetch = now;
-          return this.restaurants;
-        }
-      } catch {}
-    }
-
+  async getRestaurants(): Promise<Restaurant[]> {
     try {
       const response = await axios.get('https://cafe-chain.onrender.com/admin/allResto');
       const data = response.data;
@@ -75,13 +45,9 @@ class RestaurantService {
           totalOrders: Math.floor(Math.random() * 100) + 10,
           totalRevenue: Math.floor(Math.random() * 5000) + 1000,
           rating: 4.0 + Math.random() * 1.0,
-          isActive: resto.open || false
+          isActive: resto.open || false,
+          dailyStats: resto.dailyStats // Include daily stats from backend
         }));
-        this.lastFetch = now;
-        
-        // Cache the data
-        localStorage.setItem('allResto_cache', JSON.stringify(data.resto));
-        localStorage.setItem('allResto_cache_ts', Date.now().toString());
         
         return this.restaurants;
       } else {
@@ -95,11 +61,6 @@ class RestaurantService {
 
   getCachedRestaurants(): Restaurant[] {
     return this.restaurants;
-  }
-
-  clearCache(): void {
-    this.restaurants = [];
-    this.lastFetch = 0;
   }
 }
 
