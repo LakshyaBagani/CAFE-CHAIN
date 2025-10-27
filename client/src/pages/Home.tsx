@@ -258,7 +258,7 @@ const Home: React.FC = () => {
     await fetchAndCacheMenu(locationKey, restoId);
     // After fetching, also persist current version value
     try {
-      const versionRes = await axios.get(`http://localhost:3000/admin/resto/${restoId}/getMenuVersion`, { withCredentials: true });
+      const versionRes = await axios.get(`https://cafe-chain.onrender.com/admin/resto/${restoId}/getMenuVersion`, { withCredentials: true });
       if (versionRes?.data?.menuVersion != null) {
         localStorage.setItem(`menu_${restoId}_version`, String(versionRes.data.menuVersion));
       }
@@ -320,7 +320,7 @@ const Home: React.FC = () => {
   // Background version check and refresh if increased
   const refreshIfVersionChanged = async (restoId: number, locationKey: string, cachedVersion: number) => {
     try {
-      const versionRes = await axios.get(`http://localhost:3000/admin/resto/${restoId}/getMenuVersion`, { withCredentials: true });
+      const versionRes = await axios.get(`https://cafe-chain.onrender.com/admin/resto/${restoId}/getMenuVersion`, { withCredentials: true });
       const currentVersion = versionRes?.data?.menuVersion ?? 0;
       if (currentVersion > cachedVersion) {
         await fetchAndCacheMenu(locationKey, restoId);

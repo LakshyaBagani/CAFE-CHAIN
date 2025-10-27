@@ -38,4 +38,5 @@ router.delete("/resto/:restoId/menu/:menuId", adminController_1.deleteMenu);
 router.get("/dashboard/stats", adminController_1.getDashboardStats);
 router.get("/resto/:restaurantId/analytics", adminController_1.getRestaurantAnalytics);
 router.get("/analytics", adminController_1.getAdminAnalytics);
+router.post("/resto/:restoId/changeStatus", adminController_1.resoStatus);
 exports.default = router;
