@@ -92,7 +92,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           try {
             const parsedLocation = JSON.parse(savedLocation);
             // Check if the saved location still exists in the fresh data
-            const locationExists = locationData.find(loc => loc.id === parsedLocation.id);
+            const locationExists = locationData.find((loc: any) => loc.id === parsedLocation.id);
             if (locationExists) {
               setSelectedLocation(locationExists);
               return;
