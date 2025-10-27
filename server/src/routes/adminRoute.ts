@@ -1,6 +1,6 @@
 import { Router } from "express";
 import multer from "multer";
-import { createResto , allResto , addMenu , getDailyRevenue, restoOrderHistory , runAds , getAds , deleteAds, changeMenuStatus , getMenuVersion , changeOrderStatus , editMenu, deleteMenu, deliveredOrdersForDay, getDashboardStats, getRestaurantAnalytics, getAdminAnalytics, resoStatus } from "../controller/adminController";
+import { createResto , allResto , addMenu , restoOrderHistory , runAds , getAds , deleteAds, changeMenuStatus , getMenuVersion , changeOrderStatus , editMenu, deleteMenu, deliveredOrdersForDay, getDashboardStats, getRestaurantAnalytics, getAdminAnalytics, resoStatus } from "../controller/adminController";
 
 const router = Router();
 const storage = multer.memoryStorage();
@@ -22,7 +22,6 @@ const uploadMiddleware = upload.single('image');
 router.post("/createResto", createResto);
 router.get("/allResto", allResto);
 router.post("/resto/:restoId/addMenu", uploadMiddleware, addMenu);
-router.get("/resto/:restoId/dailyRevenue", getDailyRevenue);
 router.post("/resto/:restoId/orderHistory", restoOrderHistory);
 router.post("/resto/:restoId/deliveredOrders", deliveredOrdersForDay);
 router.post("/resto/:restoId/runAds", runAds);

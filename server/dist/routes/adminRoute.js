@@ -24,7 +24,6 @@ const uploadMiddleware = upload.single('image');
 router.post("/createResto", adminController_1.createResto);
 router.get("/allResto", adminController_1.allResto);
 router.post("/resto/:restoId/addMenu", uploadMiddleware, adminController_1.addMenu);
-router.get("/resto/:restoId/dailyRevenue", adminController_1.getDailyRevenue);
 router.post("/resto/:restoId/orderHistory", adminController_1.restoOrderHistory);
 router.post("/resto/:restoId/deliveredOrders", adminController_1.deliveredOrdersForDay);
 router.post("/resto/:restoId/runAds", adminController_1.runAds);

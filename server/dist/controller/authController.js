@@ -103,24 +103,53 @@ exports.Logout = Logout;
 const sendOTP = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { email } = req.body;
+        console.log("OTP request received for email:", email);
         if (!email) {
             return res
                 .status(400)
                 .send({ success: false, message: "Email is required" });
         }
+        // Check if user exists
+        const existingUser = yield db_1.default.user.findUnique({
+            where: { email: email }
+        });
+        console.log("User found:", !!existingUser);
+        if (!existingUser) {
+            return res
+                .status(404)
+                .send({ success: false, message: "User not found. Please sign up first." });
+        }
         const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+        console.log("Generated OTP code:", verificationCode);
+        // Update user with OTP code
         yield db_1.default.user.update({
             where: { email: email },
             data: { OTPCode: verificationCode },
         });
+        console.log("OTP code saved to database");
+        // Check if email configuration is available
+        if (!process.env.SMPT_USER || !process.env.SMPT_PASSWORD || !process.env.SENDER_EMAIL) {
+            console.error("Email configuration missing. SMPT_USER:", !!process.env.SMPT_USER, "SMPT_PASSWORD:", !!process.env.SMPT_PASSWORD, "SENDER_EMAIL:", !!process.env.SENDER_EMAIL);
+            return res
+                .status(500)
+                .send({ success: false, message: "Email service not configured. Please contact support." });
+        }
+        console.log("Email configuration check passed");
         const mailOptions = (0, mailOptions_1.default)(email, verificationCode);
+        console.log("Mail options created");
         yield nodemailer_1.default.sendMail(mailOptions);
+        console.log("Email sent successfully");
         return res
             .status(200)
-            .send({ success: true, message: "OTP send successfully!" });
+            .send({ success: true, message: "OTP sent successfully! Check your email." });
+        console.log("Email sent successfully");
     }
     catch (error) {
-        return res.status(500).send({ success: false, message: error });
+        console.error("OTP sending error:", error);
+        return res.status(500).send({
+            success: false,
+            message: error instanceof Error ? error.message : "Failed to send OTP. Please try again."
+        });
     }
 });
 exports.sendOTP = sendOTP;

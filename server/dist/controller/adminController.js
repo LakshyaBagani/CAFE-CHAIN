@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getDashboardStats = exports.deleteMenu = exports.editMenu = exports.changeOrderStatus = exports.resoStatus = exports.getMenuVersion = exports.changeMenuStatus = exports.deleteAds = exports.getAds = exports.runAds = exports.deliveredOrdersForDay = exports.restoOrderHistory = exports.getDailyRevenue = exports.addMenu = exports.getAdminAnalytics = exports.getRestaurantAnalytics = exports.allResto = exports.createResto = void 0;
+exports.getDashboardStats = exports.deleteMenu = exports.editMenu = exports.changeOrderStatus = exports.resoStatus = exports.getMenuVersion = exports.changeMenuStatus = exports.deleteAds = exports.getAds = exports.runAds = exports.deliveredOrdersForDay = exports.restoOrderHistory = exports.addMenu = exports.getAdminAnalytics = exports.getRestaurantAnalytics = exports.allResto = exports.createResto = void 0;
 const db_1 = __importDefault(require("../config/db"));
 const supabaseConfig_1 = require("../config/supabaseConfig");
 const bcrypt_1 = __importDefault(require("bcrypt"));
@@ -534,56 +534,6 @@ const addMenu = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     }
 });
 exports.addMenu = addMenu;
-const getDailyRevenue = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const { restoId } = req.params;
-        const { date } = req.body;
-        if (!date) {
-            return res.status(400).send({
-                success: false,
-                message: "Date is required (format: YYYY-MM-DD)",
-            });
-        }
-        const startDate = new Date(date);
-        const endDate = new Date(startDate);
-        endDate.setDate(endDate.getDate() + 1);
-        const orders = yield db_1.default.order.findMany({
-            where: {
-                createdAt: {
-                    gte: startDate,
-                    lt: endDate,
-                },
-                orderItems: {
-                    some: {
-                        menu: {
-                            restoId: parseInt(restoId),
-                        },
-                    },
-                },
-            },
-            select: {
-                totalPrice: true,
-                createdAt: true,
-            },
-        });
-        const totalRevenue = orders.reduce((sum, order) => sum + order.totalPrice, 0);
-        const orderCount = orders.length;
-        return res.status(200).send({
-            success: true,
-            message: "Daily revenue fetched successfully",
-            data: {
-                date: date,
-                totalRevenue,
-                orderCount,
-                orders,
-            },
-        });
-    }
-    catch (error) {
-        return res.status(500).send({ success: false, message: error });
-    }
-});
-exports.getDailyRevenue = getDailyRevenue;
 const restoOrderHistory = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { restoId } = req.params;

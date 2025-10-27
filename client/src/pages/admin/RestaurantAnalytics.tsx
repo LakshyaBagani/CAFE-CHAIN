@@ -65,7 +65,7 @@ const RestaurantAnalytics: React.FC = () => {
       
       if (response.data.success) {
         setAnalyticsData(response.data.data);
-      } else {
+        } else {
         console.error('API returned error:', response.data.message);
         // Fallback to empty data structure
         setAnalyticsData({
@@ -106,10 +106,10 @@ const RestaurantAnalytics: React.FC = () => {
           customerSatisfaction: 0
         }
       });
-    } finally {
-      setLoading(false);
-    }
-  };
+      } finally {
+        setLoading(false);
+      }
+    };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -283,7 +283,7 @@ const RestaurantAnalytics: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
@@ -292,19 +292,19 @@ const RestaurantAnalytics: React.FC = () => {
               className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-white border border-gray-200 text-gray-600 hover:text-amber-600 hover:border-amber-300 hover:shadow-md transition-all duration-200"
             >
               <ArrowLeft className="w-5 h-5" />
-            </Link>
+          </Link>
             <div>
               <h1 className="text-3xl font-bold text-gray-900 mb-1">Restaurant Analytics</h1>
               <p className="text-gray-600">Performance insights and sales metrics</p>
-            </div>
-          </div>
-          
+        </div>
+      </div>
+
            <div className="flex items-center space-x-3">
              <button className="inline-flex items-center px-5 py-2.5 bg-amber-600 text-white rounded-xl hover:bg-amber-700 transition-colors shadow-sm">
                <Download className="w-4 h-4 mr-2" />
                Export
              </button>
-           </div>
+          </div>
         </div>
 
         {/* Key Metrics */}
@@ -338,7 +338,7 @@ const RestaurantAnalytics: React.FC = () => {
               <div className="p-3 bg-blue-100 rounded-xl">
                 <ShoppingBag className="h-6 w-6 text-blue-600" />
               </div>
-            </div>
+        </div>
           </div>
 
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
@@ -354,8 +354,8 @@ const RestaurantAnalytics: React.FC = () => {
               <div className="p-3 bg-purple-100 rounded-xl">
                 <Users className="h-6 w-6 text-purple-600" />
               </div>
-            </div>
-          </div>
+        </div>
+      </div>
 
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
@@ -372,7 +372,7 @@ const RestaurantAnalytics: React.FC = () => {
               </div>
             </div>
           </div>
-        </div>
+                </div>
 
         {/* Daily Sales Chart */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-8">

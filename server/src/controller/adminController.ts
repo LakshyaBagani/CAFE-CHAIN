@@ -595,63 +595,6 @@ export const addMenu = async (req: Request, res: Response) => {
   }
 };
 
-export const getDailyRevenue = async (req: Request, res: Response) => {
-  try {
-    const { restoId } = req.params;
-    const { date } = req.body;
-
-    if (!date) {
-      return res.status(400).send({
-        success: false,
-        message: "Date is required (format: YYYY-MM-DD)",
-      });
-    }
-
-    const startDate = new Date(date as string);
-    const endDate = new Date(startDate);
-    endDate.setDate(endDate.getDate() + 1);
-
-    const orders = await prisma.order.findMany({
-      where: {
-        createdAt: {
-          gte: startDate,
-          lt: endDate,
-        },
-        orderItems: {
-          some: {
-            menu: {
-              restoId: parseInt(restoId),
-            },
-          },
-        },
-      },
-      select: {
-        totalPrice: true,
-        createdAt: true,
-      },
-    });
-
-    const totalRevenue = orders.reduce(
-      (sum, order) => sum + order.totalPrice,
-      0
-    );
-    const orderCount = orders.length;
-
-    return res.status(200).send({
-      success: true,
-      message: "Daily revenue fetched successfully",
-      data: {
-        date: date,
-        totalRevenue,
-        orderCount,
-        orders,
-      },
-    });
-  } catch (error) {
-    return res.status(500).send({ success: false, message: error });
-  }
-};
-
 export const restoOrderHistory = async (req: Request, res: Response) => {
   try {
     const { restoId } = req.params;

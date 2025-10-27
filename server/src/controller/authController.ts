@@ -105,24 +105,50 @@ export const sendOTP = async (req: Request, res: Response) => {
         .send({ success: false, message: "Email is required" });
     }
 
+    const existingUser = await prisma.user.findUnique({
+      where: { email: email }
+    });
+
+
+    if (!existingUser) {
+      return res
+        .status(404)
+        .send({ success: false, message: "User not found. Please sign up first." });
+    }
+
     const verificationCode = Math.floor(
       100000 + Math.random() * 900000
     ).toString();
 
+
+    // Update user with OTP code
     await prisma.user.update({
       where: { email: email },
       data: { OTPCode: verificationCode },
     });
 
-    const mailOptions = mailOption(email , verificationCode)
+    if (!process.env.SMPT_USER || !process.env.SMPT_PASSWORD || !process.env.SENDER_EMAIL) {
+      console.error("Email configuration missing. SMPT_USER:", !!process.env.SMPT_USER, "SMPT_PASSWORD:", !!process.env.SMPT_PASSWORD, "SENDER_EMAIL:", !!process.env.SENDER_EMAIL);
+      return res
+        .status(500)
+        .send({ success: false, message: "Email service not configured. Please contact support." });
+    }
+
+
+    const mailOptions = mailOption(email, verificationCode);
 
     await transporter.sendMail(mailOptions);
-
+    
     return res
       .status(200)
-      .send({ success: true, message: "OTP send successfully!" });
+      .send({ success: true, message: "OTP sent successfully! Check your email." });
+      
   } catch (error) {
-    return res.status(500).send({ success: false, message: error });
+    console.error("OTP sending error:", error);
+    return res.status(500).send({ 
+      success: false, 
+      message: error instanceof Error ? error.message : "Failed to send OTP. Please try again." 
+    });
   }
 };
 
