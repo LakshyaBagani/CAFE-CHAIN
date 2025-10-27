@@ -175,33 +175,21 @@ const Home: React.FC = () => {
   // Remove all-restaurants preload; rely on Layout's gated fetch with cache
   useEffect(() => {}, []);
 
+  // Fetch menu when a location is selected
+  useEffect(() => {
+    if (selectedLocation) {
+      fetchCafeMenu(selectedLocation.id);
+    }
+  }, [selectedLocation]);
+
 
 
   const fetchRestaurants = async () => {
     try {
-      // Use cached list from Layout if present
-      const cached = localStorage.getItem('allResto_cache');
-      if (cached) {
-        const resto = JSON.parse(cached);
-        const restaurantImage = 'https://b.zmtcdn.com/data/pictures/chains/3/20510753/b4533531eeccdb350c04fe047280aac6.jpg?fit=around|960:500&crop=960:500;*,*';
-        const mockRestaurants = resto.map((r: any) => ({
-          id: r.id,
-          name: r.name,
-          location: r.location,
-          rating: 4.5 + Math.random() * 0.5,
-          deliveryTime: `${Math.floor(Math.random() * 30) + 15} min`,
-          imageUrl: restaurantImage,
-          isOpen: Math.random() > 0.2
-        }));
-        setRestaurants(mockRestaurants);
-        return;
-      }
-      // Fallback: fetch if no cache (will only happen after login anyway)
+      // Always fetch fresh data on reload - no caching
       const response = await axios.get('https://cafe-chain.onrender.com/admin/allResto');
       const data = response.data;
       if (data.success && data.resto) {
-        localStorage.setItem('allResto_cache', JSON.stringify(data.resto));
-        localStorage.setItem('allResto_cache_ts', Date.now().toString());
         const restaurantImage = 'https://b.zmtcdn.com/data/pictures/chains/3/20510753/b4533531eeccdb350c04fe047280aac6.jpg?fit=around|960:500&crop=960:500;*,*';
         const mockRestaurants = data.resto.map((resto: any) => ({
           id: resto.id,
@@ -217,6 +205,23 @@ const Home: React.FC = () => {
     } catch (error) {
       console.error('Failed to fetch restaurants:', error);
     }
+  };
+
+  // Fetch menu for the selected cafe
+  const fetchCafeMenu = async (restoId: number) => {
+    try {
+      const response = await axios.get(`https://cafe-chain.onrender.com/user/resto/${restoId}/menu`, 
+        { withCredentials: true }
+      );
+      
+      if (response.data.success) {
+        console.log(`Menu for cafe ${restoId}:`, response.data.menu);
+        return response.data.menu;
+      }
+    } catch (error) {
+      console.error(`Failed to fetch menu for cafe ${restoId}:`, error);
+    }
+    return [];
   };
 
   const fetchTrendingMenus = async () => {
@@ -253,7 +258,7 @@ const Home: React.FC = () => {
     await fetchAndCacheMenu(locationKey, restoId);
     // After fetching, also persist current version value
     try {
-      const versionRes = await axios.get(`https://cafe-chain.onrender.com/admin/resto/${restoId}/getMenuVersion`, { withCredentials: true });
+      const versionRes = await axios.get(`http://localhost:3000/admin/resto/${restoId}/getMenuVersion`, { withCredentials: true });
       if (versionRes?.data?.menuVersion != null) {
         localStorage.setItem(`menu_${restoId}_version`, String(versionRes.data.menuVersion));
       }
@@ -315,7 +320,7 @@ const Home: React.FC = () => {
   // Background version check and refresh if increased
   const refreshIfVersionChanged = async (restoId: number, locationKey: string, cachedVersion: number) => {
     try {
-      const versionRes = await axios.get(`https://cafe-chain.onrender.com/admin/resto/${restoId}/getMenuVersion`, { withCredentials: true });
+      const versionRes = await axios.get(`http://localhost:3000/admin/resto/${restoId}/getMenuVersion`, { withCredentials: true });
       const currentVersion = versionRes?.data?.menuVersion ?? 0;
       if (currentVersion > cachedVersion) {
         await fetchAndCacheMenu(locationKey, restoId);
@@ -332,6 +337,8 @@ const Home: React.FC = () => {
 
   return (
     <div className="pb-6 bg-gray-50">
+      {/* Main container with max width for large screens only */}
+      <div className="max-w-7xl mx-auto">
       <style>{`
         @keyframes gentleFloat {
           0%, 100% { transform: translateY(0px); }
@@ -520,7 +527,7 @@ const Home: React.FC = () => {
 
 
       {/* Quick Categories */}
-      <div className="px-4 py-6">
+      <div className="px-4 py-6 lg:px-8 lg:py-4">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-gray-900">What's on your mind?</h2>
           <button className="text-sm text-amber-600 font-semibold hover:text-amber-700 transition-colors">
@@ -559,7 +566,7 @@ const Home: React.FC = () => {
       </div>
 
       {/* Trending Section */}
-      <div className="px-4 py-2">
+      <div className="px-4 py-2 lg:px-8 lg:py-1">
         <div className="flex items-center space-x-2 mb-4">
           <Flame className="w-5 h-5 text-orange-500" />
           <h2 className="text-xl font-bold text-gray-900 trending-title">Trending Now</h2>
@@ -568,20 +575,20 @@ const Home: React.FC = () => {
 
 
       {/* Trending Menu Items */}
-      <div className="px-4 pb-4">
+      <div className="px-4 pb-4 lg:px-8 lg:pb-3">
         {selectedLocation ? (
           <div className="space-y-4">
             {filteredTrendingMenus.length > 0 && !trendingLoading ? (
-              <div className="flex gap-4 overflow-x-auto pb-1 snap-x snap-mandatory">
+              <div className="flex gap-4 overflow-x-auto pb-1 snap-x snap-mandatory lg:grid lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 lg:gap-6 lg:overflow-x-visible">
                 {filteredTrendingMenus.slice(0, 5).map((menuItem, index) => {
                   const cartCount = cartCounts[menuItem.id] || 0;
                   return (
                     <div
                       key={menuItem.id}
-                      className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden group hover:shadow-lg hover:border-orange-300 transition-all duration-200 hover:-translate-y-1 snap-start shrink-0 grow-0 basis-[calc(50%-0.5rem)]"
+                      className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden group hover:shadow-lg hover:border-orange-300 transition-all duration-200 hover:-translate-y-1 snap-start shrink-0 grow-0 basis-[calc(50%-0.5rem)] lg:basis-auto lg:h-72 lg:flex lg:flex-col"
                     >
                       {/* Image */}
-                      <div className="relative border border-gray-200 rounded-lg overflow-hidden">
+                      <div className="relative border border-gray-200 rounded-lg overflow-hidden lg:flex-shrink-0">
                         <img
                           src={menuItem.imageUrl}
                           alt={menuItem.name}
@@ -607,7 +614,7 @@ const Home: React.FC = () => {
                       </div>
 
                       {/* Content */}
-                      <div className="p-3">
+                      <div className="p-3 lg:flex-1 lg:flex lg:flex-col lg:justify-between">
                         {/* Name and Description */}
                         <div className="mb-3">
                           <h3 className="text-sm font-bold text-gray-900 group-hover:text-orange-600 transition-colors line-clamp-1">
@@ -752,8 +759,27 @@ const Home: React.FC = () => {
               ))}
             </>
           )}
+          {Object.keys(menuItemsByCategory).length === 0 && !trendingLoading && selectedLocation && (
+            <div className="text-center py-16">
+              <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 p-12 max-w-md mx-auto">
+                <div className="w-20 h-20 bg-gradient-to-br from-amber-100 to-orange-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Utensils className="w-10 h-10 text-amber-600" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-3">No Menu Found</h3>
+                <p className="text-gray-600 mb-6">
+                  No menu items are available at {selectedLocation.name} right now.
+                </p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-xl font-medium transition-colors"
+                >
+                  Refresh Page
+                </button>
+              </div>
+            </div>
+          )}
           {Object.entries(menuItemsByCategory).map(([category, items]) => (
-            <div key={category} className="mb-8">
+            <div key={category} className="mb-8 lg:px-4 lg:mb-4">
               {/* Category Header */}
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-gray-900 flex items-center">
@@ -769,16 +795,16 @@ const Home: React.FC = () => {
               </div>
 
               {/* Category Items Grid */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 lg:gap-6">
                 {items.slice(0, 4).map((menuItem) => {
                   const cartCount = cartCounts[menuItem.id] || 0;
                   return (
                     <div
                       key={menuItem.id}
-                      className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden group hover:shadow-lg hover:border-orange-300 transition-all duration-200 hover:-translate-y-1"
+                      className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden group hover:shadow-lg hover:border-orange-300 transition-all duration-200 hover:-translate-y-1 snap-start shrink-0 grow-0 basis-[calc(50%-0.5rem)] lg:basis-auto lg:h-72 lg:flex lg:flex-col"
                     >
                       {/* Image */}
-                      <div className="relative border border-gray-200 rounded-lg overflow-hidden">
+                      <div className="relative border border-gray-200 rounded-lg overflow-hidden lg:flex-shrink-0">
                         <img
                           src={menuItem.imageUrl}
                           alt={menuItem.name}
@@ -797,7 +823,7 @@ const Home: React.FC = () => {
                       </div>
 
                       {/* Content */}
-                      <div className="p-3">
+                      <div className="p-3 lg:flex-1 lg:flex lg:flex-col lg:justify-between">
                         {/* Name and Description */}
                         <div className="mb-3">
                           <h3 className="text-sm font-bold text-gray-900 group-hover:text-orange-600 transition-colors line-clamp-1">
@@ -873,6 +899,7 @@ const Home: React.FC = () => {
         </div>
       )}
 
+      </div> {/* Close main container */}
     </div>
   );
 };

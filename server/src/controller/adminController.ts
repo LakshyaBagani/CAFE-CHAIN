@@ -881,6 +881,7 @@ export const changeMenuStatus = async (req: Request, res: Response) => {
 export const getMenuVersion = async (req: Request, res: Response) => {
   try {
     const { restoId } = req.params;
+    console.log("Resto ID",restoId);
     if (!restoId) {
       return res
         .status(400)
@@ -889,6 +890,7 @@ export const getMenuVersion = async (req: Request, res: Response) => {
     const resto = await prisma.resto.findUnique({
       where: { id: parseInt(restoId) },
     });
+    console.log("Resto",resto);
     if (!resto) {
       return res
         .status(404)

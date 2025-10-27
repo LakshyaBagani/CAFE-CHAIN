@@ -68,9 +68,20 @@ const AdminDashboard: React.FC = () => {
           todayOrders: data.data.today.totalOrders,
           todayRevenue: data.data.today.totalRevenue
         });
+        
+        // Show success toast
+        const { showToast } = await import('../../utils/toast');
+        showToast('Dashboard data loaded successfully!', 'success');
+      } else {
+        // Show error toast for API error
+        const { showToast } = await import('../../utils/toast');
+        showToast('Failed to load dashboard data', 'error');
       }
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error);
+      // Show error toast for network error
+      const { showToast } = await import('../../utils/toast');
+      showToast('Network error. Failed to load dashboard data.', 'error');
     } finally {
       setIsFetching(false);
     }

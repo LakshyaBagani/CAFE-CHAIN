@@ -62,6 +62,9 @@ const AdminAnalytics: React.FC = () => {
       
       if (response.data.success) {
         setAnalyticsData(response.data.data);
+        // Show success toast
+        const { showToast } = await import('../../utils/toast');
+        showToast('Analytics data loaded successfully!', 'success');
       } else {
         console.error('API returned error:', response.data.message);
         // Fallback to empty data structure
@@ -73,6 +76,9 @@ const AdminAnalytics: React.FC = () => {
           dailyRevenue: [],
           monthlyRevenue: []
         });
+        // Show error toast
+        const { showToast } = await import('../../utils/toast');
+        showToast('Failed to load analytics data', 'error');
       }
     } catch (error) {
       console.error('Failed to fetch analytics data:', error);
@@ -85,6 +91,9 @@ const AdminAnalytics: React.FC = () => {
         dailyRevenue: [],
         monthlyRevenue: []
       });
+      // Show error toast
+      const { showToast } = await import('../../utils/toast');
+      showToast('Network error. Failed to load analytics data.', 'error');
     } finally {
       setLoading(false);
     }

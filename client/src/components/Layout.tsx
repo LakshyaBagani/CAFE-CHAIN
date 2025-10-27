@@ -74,28 +74,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const fetchLocations = async () => {
     try {
-      // Try local cache first (persist across reloads)
-      const cached = localStorage.getItem('allResto_cache');
-      const cachedAt = localStorage.getItem('allResto_cache_ts');
-      if (cached && cachedAt) {
-        try {
-          const cacheAge = Date.now() - parseInt(cachedAt);
-          if (cacheAge < 24 * 60 * 60 * 1000) { // 24 hours
-            const cachedResto = JSON.parse(cached);
-            const locationData = cachedResto.map((resto: any) => ({
-              id: resto.id,
-              name: resto.name,
-              location: resto.location
-            }));
-            setLocations(locationData);
-            if (isInitialized && locationData.length > 0 && !selectedLocation && !userHasSelectedCafe) {
-              setSelectedLocation(locationData[0]);
-            }
-            return;
-          }
-        } catch {}
-      }
-
+      // Always fetch fresh data on reload - no caching
       const response = await fetch('https://cafe-chain.onrender.com/admin/allResto');
       const data = await response.json();
       
@@ -106,13 +85,26 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           location: resto.location
         }));
         setLocations(locationData);
-        // Save to cache for future reloads
-        localStorage.setItem('allResto_cache', JSON.stringify(data.resto));
-        localStorage.setItem('allResto_cache_ts', Date.now().toString());
-        // Only set default location if context is initialized, no location selected, and user hasn't selected a cafe yet
+        
+        // Get previously selected location from localStorage
+        const savedLocation = localStorage.getItem('selectedLocation');
+        if (savedLocation) {
+          try {
+            const parsedLocation = JSON.parse(savedLocation);
+            // Check if the saved location still exists in the fresh data
+            const locationExists = locationData.find(loc => loc.id === parsedLocation.id);
+            if (locationExists) {
+              setSelectedLocation(locationExists);
+              return;
+            }
+          } catch (error) {
+            console.error('Failed to parse saved location:', error);
+          }
+        }
+        
+        // Only set first location if no previously selected location or it doesn't exist anymore
         if (isInitialized && locationData.length > 0 && !selectedLocation && !userHasSelectedCafe) {
           setSelectedLocation(locationData[0]);
-          // Don't mark as user selection since this is automatic
         }
       }
     } catch (error) {
@@ -124,6 +116,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     setSelectedLocation(selectedLocation);
     setSelectedCafe(selectedLocation);
     setUserHasSelectedCafe(true); // Mark that user has explicitly selected a location
+    // Save selected location to localStorage for persistence across reloads
+    localStorage.setItem('selectedLocation', JSON.stringify(selectedLocation));
     setCurrentRestaurant(selectedLocation.id); // Set current restaurant for cart management
     setIsLocationDropdownOpen(false);
     
@@ -520,10 +514,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       `}</style>
 
       <div className="bg-white/95 backdrop-blur-md shadow-lg sticky top-0 z-40 border-b border-orange-100/50">
-        <div className="delivery-bar text-white px-4 py-3">
+        <div className="delivery-bar text-white px-4 py-3 lg:py-2">
           <div className="max-w-7xl mx-auto">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-4 lg:space-x-3">
                 <div className="relative location-dropdown-container">
                   <button 
                     onClick={() => setIsLocationDropdownOpen(!isLocationDropdownOpen)}
@@ -567,7 +561,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   )}
                 </div>
               </div>
-              <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-3 lg:space-x-2">
                 <Link to="/wallet" className="wallet-icon">
                   <Wallet className="h-6 w-6 text-white drop-shadow-lg" />
                 </Link>
@@ -592,7 +586,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     <input
                       type="text"
                       placeholder="Search for cuisines, dishes, restaurants..."
-                      className="search-input w-full pl-12 pr-12 py-3.5 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none text-sm bg-gray-50 focus:bg-white"
+                      className="search-input w-full pl-12 pr-12 py-3.5 lg:py-2.5 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none text-sm bg-gray-50 focus:bg-white"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       onFocus={() => setIsSearchFocused(true)}
@@ -604,7 +598,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-3 bg-gradient-to-r from-amber-100 to-orange-100 rounded-2xl px-4 py-2.5 border border-amber-300 shadow-sm">
+                <div className="flex items-center space-x-3 bg-gradient-to-r from-amber-100 to-orange-100 rounded-2xl px-4 py-2.5 lg:px-3 lg:py-2 border border-amber-300 shadow-sm">
                   <div className="flex items-center space-x-2">
                     <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
                     <span className="text-sm font-semibold text-gray-700">

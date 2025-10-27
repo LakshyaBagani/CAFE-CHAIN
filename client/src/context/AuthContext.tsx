@@ -102,6 +102,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           localStorage.setItem('auth_user', JSON.stringify(adminUser));
           localStorage.setItem('auth_user_ts', Date.now().toString());
           localStorage.setItem('admin_cookie', 'jwt=admin_token'); // Store admin cookie indicator
+          
+          // Show success toast
+          const { showToast } = await import('../utils/toast');
+          showToast('Admin login successful!', 'success');
           return;
         }
 
@@ -115,6 +119,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setUser(userData);
           localStorage.setItem('auth_user', JSON.stringify(userData));
           localStorage.setItem('auth_user_ts', Date.now().toString());
+          
+          // Show success toast
+          const { showToast } = await import('../utils/toast');
+          showToast('Login successful!', 'success');
         } else {
           throw new Error('Failed to fetch user info after login');
         }
@@ -122,6 +130,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         throw new Error(data.message || 'Login failed');
       }
     } catch (error: any) {
+      // Show error toast
+      const { showToast } = await import('../utils/toast');
+      showToast(error.message || 'Login failed. Please try again.', 'error');
       throw error;
     }
   };
@@ -135,8 +146,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         withCredentials: true
       });
 
+      // Show success toast
+      const { showToast } = await import('../utils/toast');
+      showToast('Account created successfully! Please verify your email.', 'success');
       // Don't set user immediately, let them verify email first
     } catch (error: any) {
+      // Show error toast
+      const { showToast } = await import('../utils/toast');
+      showToast(error.message || 'Signup failed. Please try again.', 'error');
       throw error;
     }
   };
@@ -150,9 +167,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.removeItem('auth_user');
       localStorage.removeItem('auth_user_ts');
       localStorage.removeItem('admin_cookie');
+      
+      // Show success toast
+      const { showToast } = await import('../utils/toast');
+      showToast('Logged out successfully!', 'success');
     } catch (error) {
       // Even if backend logout fails, clear local state
       setUser(null);
+      localStorage.removeItem('auth_user');
+      localStorage.removeItem('auth_user_ts');
+      localStorage.removeItem('admin_cookie');
+      
+      // Show success toast even if backend fails
+      const { showToast } = await import('../utils/toast');
+      showToast('Logged out successfully!', 'success');
     }
   };
 

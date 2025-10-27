@@ -51,31 +51,9 @@ const Restaurant: React.FC = () => {
 
   const fetchRestaurantData = async () => {
     try {
-      // Use cached restaurant data first
-      const cached = localStorage.getItem('allResto_cache');
-      const cachedAt = localStorage.getItem('allResto_cache_ts');
-      
-      let restaurantData;
-      if (cached && cachedAt) {
-        try {
-          const cacheAge = Date.now() - parseInt(cachedAt);
-          if (cacheAge < 24 * 60 * 60 * 1000) { // 24 hours
-            restaurantData = { success: true, restaurants: JSON.parse(cached) };
-          }
-        } catch {}
-      }
-      
-      // Only fetch if no cache or cache expired
-      if (!restaurantData) {
-        const restaurantResponse = await fetch(`https://cafe-chain.onrender.com/admin/allResto`);
-        restaurantData = await restaurantResponse.json();
-        
-        // Cache the data
-        if (restaurantData.success) {
-          localStorage.setItem('allResto_cache', JSON.stringify(restaurantData.restaurants));
-          localStorage.setItem('allResto_cache_ts', Date.now().toString());
-        }
-      }
+      // Always fetch fresh restaurant data - no caching
+      const restaurantResponse = await fetch(`https://cafe-chain.onrender.com/admin/allResto`);
+      const restaurantData = await restaurantResponse.json();
       
       if (restaurantData.success) {
         const foundRestaurant = restaurantData.restaurants.find((r: any) => r.id === parseInt(id!));
@@ -349,7 +327,26 @@ const Restaurant: React.FC = () => {
         ))}
       </div>
 
-      {filteredItems.length === 0 && (
+      {menuItems.length === 0 && !loading && (
+        <div className="text-center py-16">
+          <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 p-12 max-w-md mx-auto">
+            <div className="w-20 h-20 bg-gradient-to-br from-amber-100 to-orange-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <ChefHat className="w-10 h-10 text-amber-600" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-3">No Menu Found</h3>
+            <p className="text-gray-600 mb-6">
+              No menu items are available at this restaurant right now.
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-xl font-medium transition-colors"
+            >
+              Refresh Page
+            </button>
+          </div>
+        </div>
+      )}
+      {menuItems.length > 0 && filteredItems.length === 0 && (
         <div className="text-center py-12">
           <ChefHat className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No menu items found</h3>

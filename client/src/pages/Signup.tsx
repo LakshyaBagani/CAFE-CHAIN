@@ -58,10 +58,16 @@ const Signup: React.FC = () => {
       });
 
       if (response.data.success) {
+        // Show success toast
+        const { showToast } = await import('../utils/toast');
+        showToast('OTP sent successfully! Check your email.', 'success');
       } else {
         throw new Error(response.data.message || 'Failed to send OTP');
       }
     } catch (error: any) {
+      // Show error toast
+      const { showToast } = await import('../utils/toast');
+      showToast(error.message || 'Failed to send OTP. Please try again.', 'error');
       throw error;
     }
   };
@@ -82,12 +88,21 @@ const Signup: React.FC = () => {
 
       if (response.data.success) {
         setSuccess(true);
+        // Show success toast
+        const { showToast } = await import('../utils/toast');
+        showToast('Email verified successfully! Welcome to Cafe Chain!', 'success');
         navigate('/');
       } else {
         setError(response.data.message || 'OTP verification failed');
+        // Show error toast
+        const { showToast } = await import('../utils/toast');
+        showToast(response.data.message || 'OTP verification failed. Please try again.', 'error');
       }
     } catch (err: any) {
       setError(err.response?.data?.message || err.message || 'OTP verification failed');
+      // Show error toast
+      const { showToast } = await import('../utils/toast');
+      showToast(err.response?.data?.message || err.message || 'OTP verification failed. Please try again.', 'error');
     } finally {
       setOtpLoading(false);
     }

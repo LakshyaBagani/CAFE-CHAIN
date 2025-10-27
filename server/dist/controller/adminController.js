@@ -55,10 +55,51 @@ const allResto = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 .status(400)
                 .send({ success: false, message: "No resto found" });
         }
+        // Get today's date for daily stats
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        const dateStr = `${year}-${month}-${day}`;
+        // Create date range for the day
+        const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+        // Get daily stats for all restaurants in a single query
+        const dailyStats = yield db_1.default.order.groupBy({
+            by: ['restoId'],
+            where: {
+                createdAt: {
+                    gte: startOfDay,
+                    lt: endOfDay,
+                },
+                status: 'delivered'
+            },
+            _count: {
+                id: true
+            },
+            _sum: {
+                totalPrice: true
+            }
+        });
+        // Create a map for quick lookup
+        const statsMap = new Map();
+        dailyStats.forEach(stat => {
+            statsMap.set(stat.restoId, {
+                orderCount: stat._count.id || 0,
+                totalRevenue: Number(stat._sum.totalPrice) || 0,
+                date: dateStr
+            });
+        });
+        // Add daily stats to each restaurant
+        const restoWithStats = resto.map(restaurant => (Object.assign(Object.assign({}, restaurant), { dailyStats: statsMap.get(restaurant.id) || {
+                orderCount: 0,
+                totalRevenue: 0,
+                date: dateStr
+            } })));
         return res.status(200).send({
             success: true,
             message: "All resto fetched successfully",
-            resto,
+            resto: restoWithStats,
         });
     }
     catch (error) {
@@ -540,7 +581,18 @@ const restoOrderHistory = (req, res) => __awaiter(void 0, void 0, void 0, functi
                 .status(400)
                 .send({ success: false, message: "Date is required" });
         }
+        // Parse the date and create date range for the day
+        const targetDate = new Date(date);
+        const startOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+        const endOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate() + 1);
         const orders = yield db_1.default.order.findMany({
+            where: {
+                restoId: parseInt(restoId),
+                createdAt: {
+                    gte: startOfDay,
+                    lt: endOfDay,
+                },
+            },
             include: {
                 orderItems: {
                     include: {
@@ -556,19 +608,12 @@ const restoOrderHistory = (req, res) => __awaiter(void 0, void 0, void 0, functi
                     },
                 },
             },
-        });
-        const restaurantOrders = orders.filter((order) => order.orderItems.some((item) => item.menu.restoId === parseInt(restoId)));
-        const dateFilteredOrders = restaurantOrders.filter((order) => {
-            // Use UTC date formatting to match database timezone
-            const orderDate = new Date(order.createdAt);
-            const year = orderDate.getUTCFullYear();
-            const month = String(orderDate.getUTCMonth() + 1).padStart(2, "0");
-            const day = String(orderDate.getUTCDate()).padStart(2, "0");
-            const formattedOrderDate = `${year}-${month}-${day}`;
-            return formattedOrderDate === date;
+            orderBy: {
+                createdAt: 'desc'
+            }
         });
         // Convert BigInt to string for JSON safety
-        const safeOrders = dateFilteredOrders.map((o) => {
+        const safeOrders = orders.map((o) => {
             var _a, _b, _c;
             return (Object.assign(Object.assign({}, o), { user: o.user
                     ? Object.assign(Object.assign({}, o.user), { number: (_c = (_b = (_a = o.user) === null || _a === void 0 ? void 0 : _a.number) === null || _b === void 0 ? void 0 : _b.toString) === null || _c === void 0 ? void 0 : _c.call(_b) }) : o.user }));
@@ -598,11 +643,9 @@ const deliveredOrdersForDay = (req, res) => __awaiter(void 0, void 0, void 0, fu
         endDate.setDate(endDate.getDate() + 1);
         const orders = yield db_1.default.order.findMany({
             where: {
+                restoId: parseInt(restoId),
                 status: "Delivered",
                 createdAt: { gte: startDate, lt: endDate },
-                orderItems: {
-                    some: { menu: { restoId: parseInt(restoId) } },
-                },
             },
             include: {
                 orderItems: { include: { menu: true } },
@@ -750,6 +793,7 @@ exports.changeMenuStatus = changeMenuStatus;
 const getMenuVersion = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { restoId } = req.params;
+        console.log("Resto ID", restoId);
         if (!restoId) {
             return res
                 .status(400)
@@ -758,6 +802,7 @@ const getMenuVersion = (req, res) => __awaiter(void 0, void 0, void 0, function*
         const resto = yield db_1.default.resto.findUnique({
             where: { id: parseInt(restoId) },
         });
+        console.log("Resto", resto);
         if (!resto) {
             return res
                 .status(404)
