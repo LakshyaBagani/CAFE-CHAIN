@@ -14,4 +14,5 @@ router.post('/addWalletBalance', authProtect_1.default, userController_1.addWall
 router.get('/getWalletBalance', authProtect_1.default, userController_1.getWalletBalance);
 router.get('/userInfo', authProtect_1.default, userController_1.userInfo);
 router.get('/walletHistory', authProtect_1.default, userController_1.fetchWalletHistory);
+router.get('/restaurants', userController_1.getAllRestaurants);
 exports.default = router;

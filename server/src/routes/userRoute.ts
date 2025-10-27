@@ -1,6 +1,6 @@
 import { Router } from "express";
 import AuthProtect from "../middleware/authProtect";
-import { getOrders, addWalletBalance, getWalletBalance , createOrder , allMenu , userInfo , fetchWalletHistory} from "../controller/userController";
+import { getOrders, addWalletBalance, getWalletBalance , createOrder , allMenu , userInfo , fetchWalletHistory, getAllRestaurants} from "../controller/userController";
 
 const router = Router();
 
@@ -11,5 +11,6 @@ router.post('/addWalletBalance', AuthProtect , addWalletBalance);
 router.get('/getWalletBalance', AuthProtect , getWalletBalance);
 router.get('/userInfo', AuthProtect , userInfo);
 router.get('/walletHistory', AuthProtect , fetchWalletHistory);
+router.get('/restaurants', getAllRestaurants);
 
 export default router;

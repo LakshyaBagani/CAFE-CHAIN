@@ -2,9 +2,10 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useLocation } from '../context/LocationContext';
 import { useCart } from '../context/CartContext';
+import { useRestaurant } from '../context/RestaurantContext';
 import QuantitySelector from '../components/QuantitySelector';
 import { ArrowLeft, Plus, Utensils, ShoppingCart } from 'lucide-react';
-import axios from 'axios';
+// axios removed - using centralized context
 
 interface MenuItem {
   id: number;
@@ -21,6 +22,7 @@ const CategoryMenu: React.FC = () => {
   const { category, userId } = useParams<{ category: string; userId: string }>();
   const { } = useLocation();
   const { addItem, removeItem, updateQuantity, items: cartItems, setCurrentRestaurant } = useCart();
+  const { fetchMenu, getRestaurantStatus } = useRestaurant();
   const navigate = useNavigate();
   
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -47,51 +49,16 @@ const CategoryMenu: React.FC = () => {
     const fetchMenuItems = async () => {
       setLoading(true);
       try {
-        // Check localStorage for cached data first
-        const cacheKey = `menu_${userId}`;
-        const cachedData = localStorage.getItem(cacheKey);
-        const cachedTimestamp = localStorage.getItem(`menu_${userId}_timestamp`);
+        // Use centralized menu fetching
+        const items = await fetchMenu(parseInt(userId));
         
-        // Use cached data if it's less than 5 minutes old
-        if (cachedData && cachedTimestamp) {
-          const cacheAge = Date.now() - parseInt(cachedTimestamp);
-          if (cacheAge < 5 * 60 * 1000) { // 5 minutes
-            let items = JSON.parse(cachedData);
-            // Filter by category
-            if (category && category !== 'All') {
-              items = items.filter((item: MenuItem) => item.category === category);
-            }
-            setMenuItems(items);
-            setLoading(false);
-            return;
-          }
+        // Filter by category
+        let filteredItems = items;
+        if (category && category !== 'All') {
+          filteredItems = items.filter((item: MenuItem) => item.category === category);
         }
         
-        // Fetch fresh data
-        const response = await axios.get(`https://cafe-chain.onrender.com/user/resto/${userId}/menu`, {
-          withCredentials: true
-        });
-
-        if (response.data.success) {
-          const items = response.data.menu;
-          // Sort: available first, unavailable last
-          items.sort((a: any, b: any) => {
-            const avA = a.availability !== false;
-            const avB = b.availability !== false;
-            return Number(avB) - Number(avA);
-          });
-          // Cache the data
-          localStorage.setItem(cacheKey, JSON.stringify(items));
-          localStorage.setItem(`menu_${userId}_timestamp`, Date.now().toString());
-          
-          // Filter by category
-          let filteredItems = items;
-          if (category && category !== 'All') {
-            filteredItems = items.filter((item: MenuItem) => item.category === category);
-          }
-          
-          setMenuItems(filteredItems);
-        }
+        setMenuItems(filteredItems);
       } catch (error) {
         console.error('Error fetching menu items:', error);
         setMenuItems([]);
@@ -187,10 +154,28 @@ const CategoryMenu: React.FC = () => {
               <div className="w-20 h-20 bg-gradient-to-br from-amber-100 to-orange-100 rounded-full flex items-center justify-center mx-auto mb-6">
                 <Utensils className="w-10 h-10 text-amber-600" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">No {category} Items Found</h3>
-              <p className="text-gray-600 mb-6">
-                No {category} items are available at this location right now.
-              </p>
+              {(() => {
+                const restaurantStatus = getRestaurantStatus(parseInt(userId!));
+                if (!restaurantStatus.isOpen) {
+                  return (
+                    <>
+                      <h3 className="text-xl font-bold text-gray-900 mb-3">Restaurant is Closed</h3>
+                      <p className="text-gray-600 mb-6">
+                        This restaurant is currently closed. Please check back later.
+                      </p>
+                    </>
+                  );
+                } else {
+                  return (
+                    <>
+                      <h3 className="text-xl font-bold text-gray-900 mb-3">No {category} Items Found</h3>
+                      <p className="text-gray-600 mb-6">
+                        No {category} items are available at this location right now.
+                      </p>
+                    </>
+                  );
+                }
+              })()}
               <button
                 onClick={() => navigate('/')}
                 className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-xl font-medium transition-colors"

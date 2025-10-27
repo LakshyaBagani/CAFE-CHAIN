@@ -3,9 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
+  url      = env("DIRECT_URL")
 }
 
 model user {
@@ -40,6 +39,9 @@ model resto {
   ads         ads[]
   menus       menu[]
   orders      order[]
+
+  @@index([open])
+  @@index([location])
 }
 
 model menu {
@@ -55,6 +57,12 @@ model menu {
   ads          ads[]
   resto        resto       @relation(fields: [restoId], references: [id])
   orderItems   orderItem[]
+
+  @@index([restoId])
+  @@index([availability])
+  @@index([category])
+  @@index([restoId, availability])
+  @@index([restoId, category])
 }
 
 model orderItem {
@@ -78,6 +86,14 @@ model order {
   resto         resto       @relation(fields: [restoId], references: [id])
   user          user        @relation(fields: [userId], references: [id])
   orderItems    orderItem[]
+
+  @@index([restoId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([restoId, status])
+  @@index([restoId, createdAt])
+  @@index([status, createdAt])
+  @@index([restoId, status, createdAt])
 }
 
 model ads {

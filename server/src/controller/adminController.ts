@@ -39,8 +39,19 @@ export const createResto = async (req: Request, res: Response) => {
 
 export const allResto = async (req: Request, res: Response) => {
   try {
-    const resto = await prisma.resto.findMany();
-    if (!resto) {
+    // Optimized query: Only select needed fields
+    const resto = await prisma.resto.findMany({
+      select: {
+        id: true,
+        name: true,
+        location: true,
+        open: true,
+        menuVersion: true
+      },
+      orderBy: { name: 'asc' }
+    });
+    
+    if (!resto || resto.length === 0) {
       return res
         .status(400)
         .send({ success: false, message: "No resto found" });
@@ -57,7 +68,7 @@ export const allResto = async (req: Request, res: Response) => {
     const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
     const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
 
-    // Get daily stats for all restaurants in a single query
+    // Optimized query: Use indexes and limit to only delivered orders
     const dailyStats = await prisma.order.groupBy({
       by: ['restoId'],
       where: {
@@ -77,10 +88,10 @@ export const allResto = async (req: Request, res: Response) => {
 
     // Create a map for quick lookup
     const statsMap = new Map();
-    dailyStats.forEach(stat => {
+    dailyStats.forEach((stat: any) => {
       statsMap.set(stat.restoId, {
-        orderCount: stat._count.id || 0,
-        totalRevenue: Number(stat._sum.totalPrice) || 0,
+        orderCount: stat._count?.id || 0,
+        totalRevenue: Number(stat._sum?.totalPrice) || 0,
         date: dateStr
       });
     });
@@ -94,14 +105,15 @@ export const allResto = async (req: Request, res: Response) => {
         date: dateStr
       }
     }));
-
+    
     return res.status(200).send({
       success: true,
       message: "All resto fetched successfully",
       resto: restoWithStats,
     });
   } catch (error) {
-    return res.status(500).send({ success: false, message: error });
+    console.error("Error fetching restaurants:", error);
+    return res.status(500).send({ success: false, message: "Internal server error" });
   }
 };
 
@@ -910,6 +922,7 @@ export const resoStatus = async (req: Request, res: Response) => {
   try {
     const { restoId } = req.params;
     const { status } = req.body;
+    console.log("Changing restaurant status - ID:", restoId, "Status:", status);
 
     if (status === undefined || status === null || !restoId) {
       return res
@@ -918,14 +931,16 @@ export const resoStatus = async (req: Request, res: Response) => {
     }
     const resto = await prisma.resto.update({
       where: { id: parseInt(restoId) },
-      data: { open: status },
+      data: { open: status, menuVersion: { increment: 1 } },
     });
+    console.log("Restaurant status updated:", resto);
     return res.status(200).send({
       success: true,
       message: "Resto status changed successfully",
       resto,
     });
   } catch (error) {
+    console.error("Error changing restaurant status:", error);
     return res.status(500).send({ success: false, message: error });
   }
 };

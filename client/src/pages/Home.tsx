@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import axios from 'axios';
+// axios removed - using centralized context
 import { useLocation } from '../context/LocationContext';
 import { useVegMode } from '../context/VegModeContext';
 import { useCart } from '../context/CartContext';
 import { useCafe } from '../context/CafeContext';
+import { useRestaurant } from '../context/RestaurantContext';
 import QuantitySelector from '../components/QuantitySelector';
 import { 
   MapPin, 
@@ -16,15 +17,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-interface Restaurant {
-  id: number;
-  name: string;
-  location: string;
-  rating: number;
-  deliveryTime: string;
-  imageUrl: string;
-  isOpen: boolean;
-}
+// Restaurant interface removed - no longer needed
 
 interface MenuItem {
   id: number;
@@ -42,12 +35,13 @@ const Home: React.FC = () => {
   const { selectedLocation, setSelectedLocation } = useLocation();
   const { vegMode, setVegMode } = useVegMode();
   const { addItem, removeItem, updateQuantity, items: cartItems, setCurrentRestaurant } = useCart();
-  const { selectedCafe, setSelectedCafe, userHasSelectedCafe, isInitialized } = useCafe();
-  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  const { setSelectedCafe, userHasSelectedCafe, isInitialized } = useCafe();
+  const { restaurants, fetchMenu, getRestaurantStatus } = useRestaurant();
   const [trendingMenus, setTrendingMenus] = useState<MenuItem[]>([]);
   const [allMenuItems, setAllMenuItems] = useState<MenuItem[]>([]);
   const [trendingLoading, setTrendingLoading] = useState(false);
   const [lastRestoId, setLastRestoId] = useState<string | null>(null);
+  const fetchingRef = useRef(false);
 
   // Calculate cart counts for each menu item
   const cartCounts = useMemo(() => {
@@ -90,40 +84,15 @@ const Home: React.FC = () => {
     return categoriesWithItems;
   }, [allMenuItems, vegMode]);
 
-  // Clear old cache entries (keep only last 5 locations)
-  const clearOldCache = () => {
-    const cacheKeys = Object.keys(localStorage).filter(key => key.startsWith('menu_'));
-    if (cacheKeys.length > 5) {
-      // Remove oldest entries
-      const sortedKeys = cacheKeys.sort((a, b) => {
-        const timestampA = localStorage.getItem(`${a}_timestamp`) || '0';
-        const timestampB = localStorage.getItem(`${b}_timestamp`) || '0';
-        return parseInt(timestampA) - parseInt(timestampB);
-      });
-      
-      const keysToRemove = sortedKeys.slice(0, cacheKeys.length - 5);
-      console.log(selectedCafe);
-      
-      keysToRemove.forEach(key => {
-        localStorage.removeItem(key);
-        localStorage.removeItem(key.replace('menu_', 'menuVersion_'));
-        localStorage.removeItem(`${key}_timestamp`);
-      });
-    }
-  };
+  // Restaurants are auto-fetched by RestaurantContext
 
+  // Handle restoId from URL - use centralized restaurant data
   useEffect(() => {
-    fetchRestaurants();
-  }, []);
-
-  // Handle restoId from URL - only when context is initialized and user hasn't selected yet
-  useEffect(() => {
-    if (isInitialized && restoId && restaurants.length > 0 && restoId !== lastRestoId) {
+    if (isInitialized && restoId && restoId !== lastRestoId && restaurants.length > 0) {
       const restaurant = restaurants.find(r => r.id === parseInt(restoId));
       if (restaurant) {
         // Only switch if user hasn't made a selection yet
         if (!userHasSelectedCafe) {
-          
           setSelectedLocation({
             id: restaurant.id,
             name: restaurant.name,
@@ -134,204 +103,59 @@ const Home: React.FC = () => {
             name: restaurant.name,
             location: restaurant.location
           });
-          setCurrentRestaurant(restaurant.id); // Set current restaurant for cart management
+          setCurrentRestaurant(restaurant.id);
           setLastRestoId(restoId);
         } else {
-          // User has selected a cafe, just update the lastRestoId to prevent re-triggering
           setLastRestoId(restoId);
         }
       }
     }
   }, [isInitialized, restoId, restaurants, userHasSelectedCafe, setSelectedLocation, setSelectedCafe, lastRestoId]);
 
+  // Fetch menu when location changes
   useEffect(() => {
-    if (selectedLocation && !trendingLoading) {
+    if (selectedLocation && !trendingLoading && !fetchingRef.current) {
+      console.log("Selected location changed, fetching fresh menu data...", selectedLocation);
       fetchTrendingMenus();
     }
-  }, [selectedLocation]);
-
-  // Load cached menu immediately on mount if available
-  useEffect(() => {
-    if (selectedLocation) {
-      const cachedData = localStorage.getItem(`menu_${selectedLocation.location}`);
-      const cachedVersionStr = localStorage.getItem(`menu_${selectedLocation.id}_version`);
-      if (cachedData) {
-        try {
-          const cachedMenu = JSON.parse(cachedData);
-          const hasAvailability = Array.isArray(cachedMenu) && cachedMenu.every((i: any) => 'availability' in i);
-          if (hasAvailability) {
-            setTrendingMenus(cachedMenu.slice(0, 6));
-            // Always check version in background on reload
-            void refreshIfVersionChanged(selectedLocation.id, selectedLocation.location, cachedVersionStr ? parseInt(cachedVersionStr) : 0);
-          }
-        } catch (error) {
-          console.error('Error parsing cached menu:', error);
-        }
-      }
-    }
-  }, [selectedLocation]);
-
-  // Preload menus for all locations on app start
-  // Remove all-restaurants preload; rely on Layout's gated fetch with cache
-  useEffect(() => {}, []);
-
-  // Fetch menu when a location is selected
-  useEffect(() => {
-    if (selectedLocation) {
-      fetchCafeMenu(selectedLocation.id);
-    }
-  }, [selectedLocation]);
+  }, [selectedLocation?.id]); // Only depend on the ID, not the entire object
 
 
 
-  const fetchRestaurants = async () => {
-    try {
-      // Always fetch fresh data on reload - no caching
-      const response = await axios.get('https://cafe-chain.onrender.com/admin/allResto');
-      const data = response.data;
-      if (data.success && data.resto) {
-        const restaurantImage = 'https://b.zmtcdn.com/data/pictures/chains/3/20510753/b4533531eeccdb350c04fe047280aac6.jpg?fit=around|960:500&crop=960:500;*,*';
-        const mockRestaurants = data.resto.map((resto: any) => ({
-          id: resto.id,
-          name: resto.name,
-          location: resto.location,
-          rating: 4.5 + Math.random() * 0.5,
-          deliveryTime: `${Math.floor(Math.random() * 30) + 15} min`,
-          imageUrl: restaurantImage,
-          isOpen: Math.random() > 0.2
-        }));
-        setRestaurants(mockRestaurants);
-      }
-    } catch (error) {
-      console.error('Failed to fetch restaurants:', error);
-    }
-  };
 
-  // Fetch menu for the selected cafe
-  const fetchCafeMenu = async (restoId: number) => {
-    try {
-      const response = await axios.get(`https://cafe-chain.onrender.com/user/resto/${restoId}/menu`, 
-        { withCredentials: true }
-      );
-      
-      if (response.data.success) {
-        console.log(`Menu for cafe ${restoId}:`, response.data.menu);
-        return response.data.menu;
-      }
-    } catch (error) {
-      console.error(`Failed to fetch menu for cafe ${restoId}:`, error);
-    }
-    return [];
-  };
+  // fetchRestaurants removed - Layout.tsx handles restaurant data fetching
+
+  // No separate fetchCafeMenu - using fetchMenu instead
 
   const fetchTrendingMenus = async () => {
-    if (!selectedLocation) return;
-    
-    const locationKey = selectedLocation.location;
-    const restoId = selectedLocation.id;
-    const cachedVersionStr = localStorage.getItem(`menu_${restoId}_version`);
-    
-    // Check localStorage cache first - use 5-minute cache
-    const cachedData = localStorage.getItem(`menu_${locationKey}`);
-    const cachedTimestamp = localStorage.getItem(`menu_${locationKey}_timestamp`);
-    
-    if (cachedData && cachedTimestamp) {
-      const cacheAge = Date.now() - parseInt(cachedTimestamp);
-      if (cacheAge < 5 * 60 * 1000) { // 5 minutes
-        try {
-          const cachedMenu = JSON.parse(cachedData);
-          const hasAvailability = Array.isArray(cachedMenu) && cachedMenu.every((i: any) => 'availability' in i);
-          if (hasAvailability) {
-            setAllMenuItems(cachedMenu);
-            setTrendingMenus(cachedMenu.slice(0, 6));
-            // Background version check every time
-            void refreshIfVersionChanged(restoId, locationKey, cachedVersionStr ? parseInt(cachedVersionStr) : 0);
-            return;
-          }
-        } catch (error) {
-          console.error('Error parsing cached menu:', error);
-        }
-      }
+    if (!selectedLocation || trendingLoading || fetchingRef.current) {
+      console.log("Skipping fetchTrendingMenus - no location, already loading, or already fetching");
+      return;
     }
     
-    // Fetch fresh menu
-    await fetchAndCacheMenu(locationKey, restoId);
-    // After fetching, also persist current version value
-    try {
-      const versionRes = await axios.get(`https://cafe-chain.onrender.com/admin/resto/${restoId}/getMenuVersion`, { withCredentials: true });
-      if (versionRes?.data?.menuVersion != null) {
-        localStorage.setItem(`menu_${restoId}_version`, String(versionRes.data.menuVersion));
-      }
-    } catch {}
-  };
-
-  const fetchAndCacheMenu = async (locationKey: string, restoId: number) => {
+    const restoId = selectedLocation.id;
+    
+    console.log("Fetching fresh trending menus for location:", selectedLocation.location, "restoId:", restoId);
+    fetchingRef.current = true;
     setTrendingLoading(true);
+    
     try {
-      const response = await axios.get(`https://cafe-chain.onrender.com/user/resto/${restoId}/menu`, {
-        withCredentials: true
-      });
-      
-      const data = response.data;
-      
-      if (data.success) {
-        // Process menu items
-        const allMenuItems = data.menu.map((item: any) => ({
-          id: item.id,
-          name: item.name,
-          price: item.price,
-          description: item.description,
-          imageUrl: item.imageUrl,
-          veg: item.veg,
-          category: item.category,
-          availability: item.availability
-        }));
-        // Sort: available first, unavailable last
-        allMenuItems.sort((a: any, b: any) => {
-          const avA = a.availability !== false; // treat undefined as available
-          const avB = b.availability !== false;
-          return Number(avB) - Number(avA);
-        });
-        
-        
-        // Cache in localStorage with timestamp
-        localStorage.setItem(`menu_${locationKey}`, JSON.stringify(allMenuItems));
-        localStorage.setItem(`menu_${locationKey}_timestamp`, Date.now().toString());
-        
-        // Cache with timestamp only - no version check needed
-        
-        // Clear old cache entries
-        clearOldCache();
-        
-                    // Set all menu items for category sections
-                    setAllMenuItems(allMenuItems);
-                    
-                    // Set trending items (first 6)
-                    setTrendingMenus(allMenuItems.slice(0, 6));
-        
-      }
+      const menuItems = await fetchMenu(restoId);
+      setAllMenuItems(menuItems);
+      setTrendingMenus(menuItems.slice(0, 6));
     } catch (error) {
-      console.error('Error fetching trending menus:', error);
+      console.error('Error fetching menu:', error);
+      setAllMenuItems([]);
+      setTrendingMenus([]);
     } finally {
       setTrendingLoading(false);
+      fetchingRef.current = false;
     }
   };
 
-  // Background version check and refresh if increased
-  const refreshIfVersionChanged = async (restoId: number, locationKey: string, cachedVersion: number) => {
-    try {
-      const versionRes = await axios.get(`https://cafe-chain.onrender.com/admin/resto/${restoId}/getMenuVersion`, { withCredentials: true });
-      const currentVersion = versionRes?.data?.menuVersion ?? 0;
-      if (currentVersion > cachedVersion) {
-        await fetchAndCacheMenu(locationKey, restoId);
-        try {
-          localStorage.setItem(`menu_${restoId}_version`, String(currentVersion));
-        } catch {}
-      }
-    } catch {
-      // ignore version check errors
-    }
-  };
+  // fetchMenu function removed - using centralized context
+
+  // No version checking - always fetch fresh data
 
 
 
@@ -565,17 +389,18 @@ const Home: React.FC = () => {
         </div>
       </div>
 
-      {/* Trending Section */}
-      <div className="px-4 py-2 lg:px-8 lg:py-1">
-        <div className="flex items-center space-x-2 mb-4">
-          <Flame className="w-5 h-5 text-orange-500" />
-          <h2 className="text-xl font-bold text-gray-900 trending-title">Trending Now</h2>
-        </div>
-      </div>
+      {/* Trending Section - Only show if restaurant is open */}
+      {selectedLocation && getRestaurantStatus(selectedLocation.id).isOpen && (
+        <>
+          <div className="px-4 py-2 lg:px-8 lg:py-1">
+            <div className="flex items-center space-x-2 mb-4">
+              <Flame className="w-5 h-5 text-orange-500" />
+              <h2 className="text-xl font-bold text-gray-900 trending-title">Trending Now</h2>
+            </div>
+          </div>
 
-
-      {/* Trending Menu Items */}
-      <div className="px-4 pb-4 lg:px-8 lg:pb-3">
+          {/* Trending Menu Items */}
+          <div className="px-4 pb-4 lg:px-8 lg:pb-3">
         {selectedLocation ? (
           <div className="space-y-4">
             {filteredTrendingMenus.length > 0 && !trendingLoading ? (
@@ -727,10 +552,12 @@ const Home: React.FC = () => {
             <p className="text-gray-600">Please select a location to see trending items</p>
           </div>
         )}
-      </div>
+          </div>
+        </>
+      )}
 
-      {/* Category Sections */}
-      {selectedLocation && (
+      {/* Category Sections - Only show if restaurant is open */}
+      {selectedLocation && getRestaurantStatus(selectedLocation.id).isOpen && (
         <div className="px-4 pb-4">
           {Object.keys(menuItemsByCategory).length === 0 && trendingLoading && (
             <>
@@ -758,25 +585,6 @@ const Home: React.FC = () => {
                 </div>
               ))}
             </>
-          )}
-          {Object.keys(menuItemsByCategory).length === 0 && !trendingLoading && selectedLocation && (
-            <div className="text-center py-16">
-              <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 p-12 max-w-md mx-auto">
-                <div className="w-20 h-20 bg-gradient-to-br from-amber-100 to-orange-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Utensils className="w-10 h-10 text-amber-600" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">No Menu Found</h3>
-                <p className="text-gray-600 mb-6">
-                  No menu items are available at {selectedLocation.name} right now.
-                </p>
-                <button
-                  onClick={() => window.location.reload()}
-                  className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-xl font-medium transition-colors"
-                >
-                  Refresh Page
-                </button>
-              </div>
-            </div>
           )}
           {Object.entries(menuItemsByCategory).map(([category, items]) => (
             <div key={category} className="mb-8 lg:px-4 lg:mb-4">
@@ -899,7 +707,63 @@ const Home: React.FC = () => {
         </div>
       )}
 
-      </div> {/* Close main container */}
+      {/* Restaurant Closed Message - Show when restaurant is closed */}
+      {selectedLocation && !getRestaurantStatus(selectedLocation.id).isOpen && (
+        <div className="text-center py-16 px-4">
+          <div className="bg-gradient-to-br from-white/90 to-amber-50/90 backdrop-blur-lg rounded-3xl shadow-2xl border border-amber-200/50 p-12 max-w-lg mx-auto transform hover:scale-105 transition-all duration-300">
+            {/* Animated Icon */}
+            <div className="w-24 h-24 bg-gradient-to-br from-red-100 to-orange-100 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
+              <div className="w-16 h-16 bg-gradient-to-br from-red-500 to-orange-500 rounded-full flex items-center justify-center">
+                <Utensils className="w-8 h-8 text-white animate-bounce" />
+              </div>
+            </div>
+            
+            {/* Content */}
+            <div className="space-y-4">
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">Restaurant is Closed</h3>
+              <p className="text-gray-600 text-lg leading-relaxed">
+                {selectedLocation.name} is currently closed. Please check back later.
+              </p>
+              
+              {/* Status Badge */}
+              <div className="inline-flex items-center px-4 py-2 bg-red-100 text-red-800 rounded-full text-sm font-medium">
+                <div className="w-2 h-2 bg-red-500 rounded-full mr-2 animate-pulse"></div>
+                Currently Closed
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* No Menu Found Message - Show when restaurant is open but no menu items */}
+      {selectedLocation && getRestaurantStatus(selectedLocation.id).isOpen && Object.keys(menuItemsByCategory).length === 0 && !trendingLoading && (
+        <div className="text-center py-16 px-4">
+          <div className="bg-gradient-to-br from-white/90 to-blue-50/90 backdrop-blur-lg rounded-3xl shadow-2xl border border-blue-200/50 p-12 max-w-lg mx-auto transform hover:scale-105 transition-all duration-300">
+            {/* Animated Icon */}
+            <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-full flex items-center justify-center">
+                <Utensils className="w-8 h-8 text-white animate-bounce" />
+              </div>
+            </div>
+            
+            {/* Content */}
+            <div className="space-y-4">
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">No Menu Found</h3>
+              <p className="text-gray-600 text-lg leading-relaxed">
+                No menu items are available at {selectedLocation.name} right now.
+              </p>
+              
+              {/* Status Badge */}
+              <div className="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                <div className="w-2 h-2 bg-blue-500 rounded-full mr-2 animate-pulse"></div>
+                Menu Unavailable
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      </div> 
     </div>
   );
 };

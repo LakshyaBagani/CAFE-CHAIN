@@ -125,16 +125,29 @@ const Cart: React.FC = () => {
   if (items.length === 0) {
     return (
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="text-center py-12">
-          <ShoppingBag className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Your cart is empty</h2>
-          <p className="text-gray-600 mb-6">Add some delicious items to get started!</p>
+        {/* Header with back button */}
+        <div className="flex items-center mb-8">
           <button
             onClick={() => navigate('/')}
-            className="bg-amber-500 hover:bg-amber-600 text-white font-semibold py-3 px-6 rounded-xl transition-colors"
+            className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors"
           >
-            Browse Restaurants
+            <ArrowLeft className="h-5 w-5" />
+            <span className="font-medium">Back to Home</span>
           </button>
+        </div>
+
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <ShoppingBag className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Your cart is empty</h2>
+            <p className="text-gray-600 mb-6">Add some delicious items to get started!</p>
+            <button
+              onClick={() => navigate('/')}
+              className="bg-amber-500 hover:bg-amber-600 text-white font-semibold py-3 px-6 rounded-xl transition-colors"
+            >
+              Browse Restaurants
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -184,10 +197,11 @@ const Cart: React.FC = () => {
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center space-x-4">
           <button
-            onClick={() => navigate(-1)}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            onClick={() => navigate('/')}
+            className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors"
           >
             <ArrowLeft className="h-5 w-5" />
+            <span className="font-medium">Back to Home</span>
           </button>
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Shopping Cart</h1>

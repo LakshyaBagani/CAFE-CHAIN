@@ -49,8 +49,18 @@ const createResto = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
 exports.createResto = createResto;
 const allResto = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const resto = yield db_1.default.resto.findMany();
-        if (!resto) {
+        // Optimized query: Only select needed fields
+        const resto = yield db_1.default.resto.findMany({
+            select: {
+                id: true,
+                name: true,
+                location: true,
+                open: true,
+                menuVersion: true
+            },
+            orderBy: { name: 'asc' }
+        });
+        if (!resto || resto.length === 0) {
             return res
                 .status(400)
                 .send({ success: false, message: "No resto found" });
@@ -64,7 +74,7 @@ const allResto = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         // Create date range for the day
         const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
         const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
-        // Get daily stats for all restaurants in a single query
+        // Optimized query: Use indexes and limit to only delivered orders
         const dailyStats = yield db_1.default.order.groupBy({
             by: ['restoId'],
             where: {
@@ -83,10 +93,11 @@ const allResto = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         });
         // Create a map for quick lookup
         const statsMap = new Map();
-        dailyStats.forEach(stat => {
+        dailyStats.forEach((stat) => {
+            var _a, _b;
             statsMap.set(stat.restoId, {
-                orderCount: stat._count.id || 0,
-                totalRevenue: Number(stat._sum.totalPrice) || 0,
+                orderCount: ((_a = stat._count) === null || _a === void 0 ? void 0 : _a.id) || 0,
+                totalRevenue: Number((_b = stat._sum) === null || _b === void 0 ? void 0 : _b.totalPrice) || 0,
                 date: dateStr
             });
         });
@@ -103,7 +114,8 @@ const allResto = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         });
     }
     catch (error) {
-        return res.status(500).send({ success: false, message: error });
+        console.error("Error fetching restaurants:", error);
+        return res.status(500).send({ success: false, message: "Internal server error" });
     }
 });
 exports.allResto = allResto;
@@ -823,6 +835,7 @@ const resoStatus = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
     try {
         const { restoId } = req.params;
         const { status } = req.body;
+        console.log("Changing restaurant status - ID:", restoId, "Status:", status);
         if (status === undefined || status === null || !restoId) {
             return res
                 .status(400)
@@ -830,8 +843,9 @@ const resoStatus = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         }
         const resto = yield db_1.default.resto.update({
             where: { id: parseInt(restoId) },
-            data: { open: status },
+            data: { open: status, menuVersion: { increment: 1 } },
         });
+        console.log("Restaurant status updated:", resto);
         return res.status(200).send({
             success: true,
             message: "Resto status changed successfully",
@@ -839,6 +853,7 @@ const resoStatus = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         });
     }
     catch (error) {
+        console.error("Error changing restaurant status:", error);
         return res.status(500).send({ success: false, message: error });
     }
 });

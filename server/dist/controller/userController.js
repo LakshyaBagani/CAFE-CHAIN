@@ -23,7 +23,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchWalletHistory = exports.userInfo = exports.getWalletBalance = exports.addWalletBalance = exports.allMenu = exports.getOrders = exports.createOrder = void 0;
+exports.getAllRestaurants = exports.fetchWalletHistory = exports.userInfo = exports.getWalletBalance = exports.addWalletBalance = exports.allMenu = exports.getOrders = exports.createOrder = void 0;
 const db_1 = __importDefault(require("../config/db"));
 const createOrder = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { totalPrice, orderItems, paymentMethod, deliveryType } = req.body;
@@ -103,14 +103,43 @@ const allMenu = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         if (!restoId) {
             return res.status(400).send({ success: false, message: "Resto ID is required" });
         }
-        const menu = yield db_1.default.menu.findMany({ where: { restoId: parseInt(restoId) } });
-        if (!menu) {
-            return res.status(400).send({ success: false, message: "Menu not found" });
+        // Optimized query: Only select needed fields and check if restaurant is open
+        const resto = yield db_1.default.resto.findUnique({
+            where: { id: parseInt(restoId) },
+            select: { id: true, open: true, name: true }
+        });
+        if (!resto) {
+            return res.status(400).send({ success: false, message: "Resto not found" });
         }
+        if (!resto.open) {
+            return res.status(200).send({ success: true, message: "Resto is closed", menu: [] });
+        }
+        // Optimized query: Use index on restoId and availability, select only needed fields
+        const menu = yield db_1.default.menu.findMany({
+            where: {
+                restoId: parseInt(restoId),
+                availability: true // Only get available items
+            },
+            select: {
+                id: true,
+                name: true,
+                price: true,
+                description: true,
+                imageUrl: true,
+                veg: true,
+                category: true,
+                availability: true
+            },
+            orderBy: [
+                { availability: 'desc' }, // Available items first
+                { name: 'asc' } // Then sort by name
+            ]
+        });
         return res.status(200).send({ success: true, message: "Menu fetched successfully", menu });
     }
     catch (error) {
-        return res.status(500).send({ success: false, message: error });
+        console.error("Error fetching menu:", error);
+        return res.status(500).send({ success: false, message: "Internal server error" });
     }
 });
 exports.allMenu = allMenu;
@@ -213,3 +242,31 @@ const fetchWalletHistory = (req, res) => __awaiter(void 0, void 0, void 0, funct
     }
 });
 exports.fetchWalletHistory = fetchWalletHistory;
+const getAllRestaurants = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const restaurants = yield db_1.default.resto.findMany({
+            select: {
+                id: true,
+                name: true,
+                location: true,
+                open: true
+            },
+            orderBy: { name: 'asc' }
+        });
+        if (!restaurants || restaurants.length === 0) {
+            return res
+                .status(400)
+                .send({ success: false, message: "No restaurants found" });
+        }
+        return res.status(200).send({
+            success: true,
+            message: "Restaurants fetched successfully",
+            restaurants: restaurants,
+        });
+    }
+    catch (error) {
+        console.error("Error fetching restaurants for users:", error);
+        return res.status(500).send({ success: false, message: "Internal server error" });
+    }
+});
+exports.getAllRestaurants = getAllRestaurants;

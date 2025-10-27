@@ -5,6 +5,7 @@ import { CartProvider } from './context/CartContext';
 import { LocationProvider } from './context/LocationContext';
 import { VegModeProvider } from './context/VegModeContext';
 import { CafeProvider } from './context/CafeContext';
+import { RestaurantProvider } from './context/RestaurantContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
@@ -33,9 +34,11 @@ function App() {
         <LocationProvider>
           <VegModeProvider>
             <CafeProvider>
-              <Router>
-                <AppRoutes />
-              </Router>
+              <RestaurantProvider>
+                <Router>
+                  <AppRoutes />
+                </Router>
+              </RestaurantProvider>
             </CafeProvider>
           </VegModeProvider>
         </LocationProvider>

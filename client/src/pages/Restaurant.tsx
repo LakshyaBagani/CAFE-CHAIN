@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import axios from 'axios';
+// axios removed - using centralized context
 import { useCart } from '../context/CartContext';
+import { useRestaurant } from '../context/RestaurantContext';
 import { 
   Star, 
   Clock, 
@@ -36,6 +37,7 @@ interface Restaurant {
 const Restaurant: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { addItem } = useCart();
+  const { restaurants, fetchMenu, getRestaurantStatus } = useRestaurant();
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,96 +49,42 @@ const Restaurant: React.FC = () => {
     if (id) {
       fetchRestaurantData();
     }
-  }, [id]);
+  }, [id, restaurants]);
 
   const fetchRestaurantData = async () => {
     try {
-      // Always fetch fresh restaurant data - no caching
-      const restaurantResponse = await fetch(`https://cafe-chain.onrender.com/admin/allResto`);
-      const restaurantData = await restaurantResponse.json();
+      setLoading(true);
       
-      if (restaurantData.success) {
-        const foundRestaurant = restaurantData.restaurants.find((r: any) => r.id === parseInt(id!));
-        if (foundRestaurant) {
-          setRestaurant({
-            id: foundRestaurant.id,
-            name: foundRestaurant.name,
-            location: foundRestaurant.location,
-            rating: 4.5 + Math.random() * 0.5,
-            deliveryTime: `${Math.floor(Math.random() * 30) + 15} min`,
-            imageUrl: `https://images.unsplash.com/photo-${1500000000000 + Math.random() * 1000000000}?w=800&h=400&fit=crop`,
-            description: "Experience the finest cuisine with our carefully crafted menu featuring fresh ingredients and traditional recipes."
-          });
-        }
+      // Wait for restaurants to be loaded (they should be auto-loaded by context)
+      if (restaurants.length === 0) {
+        console.log("Waiting for restaurants to be loaded...");
+        return; // Will re-trigger useEffect when restaurants are loaded
+      }
+      
+      // Find restaurant from centralized data
+      const foundRestaurant = restaurants.find((r: any) => r.id === parseInt(id!));
+      if (foundRestaurant) {
+        setRestaurant({
+          id: foundRestaurant.id,
+          name: foundRestaurant.name,
+          location: foundRestaurant.location,
+          rating: 4.5 + Math.random() * 0.5,
+          deliveryTime: `${Math.floor(Math.random() * 30) + 15} min`,
+          imageUrl: `https://images.unsplash.com/photo-${1500000000000 + Math.random() * 1000000000}?w=800&h=400&fit=crop`,
+          description: "Experience the finest cuisine with our carefully crafted menu featuring fresh ingredients and traditional recipes."
+        });
       }
 
-      // SWR with versioning for menu
-      const cacheKey = `menu_${id}`;
-      const versionKey = `menu_${id}_version`;
-      const cachedMenuStr = localStorage.getItem(cacheKey);
-      const cachedVersionStr = localStorage.getItem(versionKey);
-
-      if (cachedMenuStr) {
-        // Immediate render from cache on reload (no skeleton)
-        try {
-          const cachedMenu = JSON.parse(cachedMenuStr);
-          if (Array.isArray(cachedMenu)) {
-            const list = [...cachedMenu];
-            list.sort((a: any, b: any) => Number(b.availability !== false) - Number(a.availability !== false));
-            setMenuItems(list);
-            setLoading(false);
-          }
-        } catch (e) {
-          console.warn('[Restaurant] Failed to parse cached menu for', id, e);
-        }
-
-        // Silent background version check; update if increased
-        try {
-          const versionRes = await axios.get(`https://cafe-chain.onrender.com/admin/resto/${id}/getMenuVersion`, { withCredentials: true });
-          const currentVersion = versionRes?.data?.menuVersion ?? 0;
-          const cachedVersion = cachedVersionStr ? parseInt(cachedVersionStr) : 0;
-          if (currentVersion > cachedVersion) {
-            const freshRes = await axios.get(`https://cafe-chain.onrender.com/user/resto/${id}/menu?t=${Date.now()}`, { withCredentials: true });
-            if (freshRes.data?.success) {
-              const freshList = Array.isArray(freshRes.data.menu) ? [...freshRes.data.menu] : [];
-              freshList.sort((a: any, b: any) => Number(b.availability !== false) - Number(a.availability !== false));
-              setMenuItems(freshList);
-              try {
-                localStorage.setItem(cacheKey, JSON.stringify(freshList));
-                localStorage.setItem(versionKey, String(currentVersion));
-              } catch {}
-            }
-          } else {
-          }
-        } catch (verErr) {
-          console.warn('[Restaurant] Version check failed', verErr);
-        }
-      } else {
-        // No cache: fetch fresh, then store menu and version
-        const menuRes = await axios.get(`https://cafe-chain.onrender.com/user/resto/${id}/menu`, { withCredentials: true });
-        if (menuRes.data?.success) {
-          const list = Array.isArray(menuRes.data.menu) ? [...menuRes.data.menu] : [];
-          list.sort((a: any, b: any) => Number(b.availability !== false) - Number(a.availability !== false));
-          setMenuItems(list);
-          try {
-            localStorage.setItem(cacheKey, JSON.stringify(list));
-          } catch {}
-          try {
-            const versionRes = await axios.get(`https://cafe-chain.onrender.com/admin/resto/${id}/getMenuVersion`, { withCredentials: true });
-            if (versionRes?.data?.menuVersion != null) {
-              localStorage.setItem(versionKey, String(versionRes.data.menuVersion));
-            }
-          } catch (e) {
-            console.warn('[Restaurant] Failed to fetch/store version on first fetch', e);
-          }
-        } else {
-          setMenuItems([]);
-        }
-      }
+      // Use centralized menu fetching
+      console.log("Fetching fresh menu data...");
+      const menuItems = await fetchMenu(parseInt(id!));
+      console.log("Menu items received:", menuItems.length, "items");
+      setMenuItems(menuItems);
+      
     } catch (error) {
-      console.error('Failed to fetch restaurant data:', error);
+      console.error('Error fetching restaurant data:', error);
+      setMenuItems([]);
     } finally {
-      // If we rendered from cache above, loading was already set false.
       setLoading(false);
     }
   };
@@ -327,25 +275,43 @@ const Restaurant: React.FC = () => {
         ))}
       </div>
 
-      {menuItems.length === 0 && !loading && (
-        <div className="text-center py-16">
-          <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 p-12 max-w-md mx-auto">
-            <div className="w-20 h-20 bg-gradient-to-br from-amber-100 to-orange-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <ChefHat className="w-10 h-10 text-amber-600" />
+        {menuItems.length === 0 && !loading && (
+          <div className="text-center py-16">
+            <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 p-12 max-w-md mx-auto">
+              <div className="w-20 h-20 bg-gradient-to-br from-amber-100 to-orange-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <ChefHat className="w-10 h-10 text-amber-600" />
+              </div>
+              {(() => {
+                const restaurantStatus = getRestaurantStatus(parseInt(id!));
+                if (!restaurantStatus.isOpen) {
+                  return (
+                    <>
+                      <h3 className="text-xl font-bold text-gray-900 mb-3">Restaurant is Closed</h3>
+                      <p className="text-gray-600 mb-6">
+                        This restaurant is currently closed. Please check back later.
+                      </p>
+                    </>
+                  );
+                } else {
+                  return (
+                    <>
+                      <h3 className="text-xl font-bold text-gray-900 mb-3">No Menu Found</h3>
+                      <p className="text-gray-600 mb-6">
+                        No menu items are available at this restaurant right now.
+                      </p>
+                    </>
+                  );
+                }
+              })()}
+              <button
+                onClick={() => window.location.reload()}
+                className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-xl font-medium transition-colors"
+              >
+                Refresh Page
+              </button>
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-3">No Menu Found</h3>
-            <p className="text-gray-600 mb-6">
-              No menu items are available at this restaurant right now.
-            </p>
-            <button
-              onClick={() => window.location.reload()}
-              className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-xl font-medium transition-colors"
-            >
-              Refresh Page
-            </button>
           </div>
-        </div>
-      )}
+        )}
       {menuItems.length > 0 && filteredItems.length === 0 && (
         <div className="text-center py-12">
           <ChefHat className="h-12 w-12 text-gray-400 mx-auto mb-4" />
