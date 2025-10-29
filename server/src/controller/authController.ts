@@ -3,7 +3,7 @@ import bcrypt from "bcrypt";
 import prisma from "../config/db";
 import generateToken from "../utils/token";
 import mailOption from "../utils/mailOptions";
-import transporter from "../config/nodemailer";
+import brevoClient, { hasBrevoApiKey, brevoApiKeySource } from "../config/brevo";
 import generateAdminToken from "../utils/adminToken";
 
 export const Signup = async (req: Request, res: Response) => {
@@ -98,6 +98,8 @@ export const Logout = async (req:Request,res:Response) => {
 export const sendOTP = async (req: Request, res: Response) => {
   try {
     const { email } = req.body;
+    const startTs = Date.now();
+    console.log("[OTP] Request received", { email });
 
     if (!email) {
       return res
@@ -105,9 +107,9 @@ export const sendOTP = async (req: Request, res: Response) => {
         .send({ success: false, message: "Email is required" });
     }
 
-    const existingUser = await prisma.user.findUnique({
-      where: { email: email }
-    });
+    console.time("[OTP] prisma.user.findUnique");
+    const existingUser = await prisma.user.findUnique({ where: { email: email } });
+    console.timeEnd("[OTP] prisma.user.findUnique");
 
 
     if (!existingUser) {
@@ -122,13 +124,16 @@ export const sendOTP = async (req: Request, res: Response) => {
 
 
     // Update user with OTP code
-    await prisma.user.update({
-      where: { email: email },
-      data: { OTPCode: verificationCode },
-    });
+    console.time("[OTP] prisma.user.update(OTPCode)");
+    await prisma.user.update({ where: { email: email }, data: { OTPCode: verificationCode } });
+    console.timeEnd("[OTP] prisma.user.update(OTPCode)");
 
-    if (!process.env.SMPT_USER || !process.env.SMPT_PASSWORD || !process.env.SENDER_EMAIL) {
-      console.error("Email configuration missing. SMPT_USER:", !!process.env.SMPT_USER, "SMPT_PASSWORD:", !!process.env.SMPT_PASSWORD, "SENDER_EMAIL:", !!process.env.SENDER_EMAIL);
+    if (!process.env.SENDER_EMAIL || !hasBrevoApiKey) {
+      console.error("[OTP] Email configuration missing.", {
+        hasSenderEmail: !!process.env.SENDER_EMAIL,
+        hasBrevoKey: hasBrevoApiKey,
+        brevoKeySource: brevoApiKeySource,
+      });
       return res
         .status(500)
         .send({ success: false, message: "Email service not configured. Please contact support." });
@@ -136,15 +141,41 @@ export const sendOTP = async (req: Request, res: Response) => {
 
 
     const mailOptions = mailOption(email, verificationCode);
+    console.log("[Email] Preparing to send OTP (Brevo):", {
+      to: mailOptions.to,
+      subject: mailOptions.subject,
+      htmlLength: mailOptions.html?.length
+    });
+    const sendSmtpEmail: any = {
+      sender: { email: process.env.SENDER_EMAIL, name: "Sojo's Cafe" },
+      to: [{ email: mailOptions.to }],
+      subject: mailOptions.subject,
+      htmlContent: mailOptions.html,
+    };
 
-    await transporter.sendMail(mailOptions);
+    try {
+      console.time("[OTP] brevo.sendTransacEmail");
+      const response = await brevoClient.sendTransacEmail(sendSmtpEmail);
+      console.timeEnd("[OTP] brevo.sendTransacEmail");
+      console.log("[Email] OTP email sent (Brevo)", { to: mailOptions.to, messageId: (response as any)?.messageId });
+    } catch (e) {
+      const err = e as any;
+      console.error("[Email] Brevo send failed:", {
+        message: err?.message,
+        code: err?.code,
+        responseData: err?.response?.body || err?.response?.data,
+        stack: err?.stack,
+      });
+      return res.status(500).send({ success: false, message: "Failed to send OTP. Please try again." });
+    }
     
+    console.log("[OTP] Completed in", Date.now() - startTs, "ms");
     return res
       .status(200)
       .send({ success: true, message: "OTP sent successfully! Check your email." });
       
   } catch (error) {
-    console.error("OTP sending error:", error);
+    console.error("[OTP] Uncaught error:", error);
     return res.status(500).send({ 
       success: false, 
       message: error instanceof Error ? error.message : "Failed to send OTP. Please try again." 

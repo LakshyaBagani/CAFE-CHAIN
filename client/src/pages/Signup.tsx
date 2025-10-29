@@ -50,7 +50,7 @@ const Signup: React.FC = () => {
 
   const sendOTP = async () => {
     try {
-      const response = await axios.post('https://cafe-chain.onrender.com/auth/sendOTP', {
+      const response = await axios.post('http://localhost:3000/auth/sendOTP', {
         email: formData.email
       }, {
         headers: { 'Content-Type': 'application/json' },
