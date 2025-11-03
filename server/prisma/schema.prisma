@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DIRECT_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model user {
@@ -23,7 +24,7 @@ model userWallet {
   id            Int      @id @default(autoincrement())
   userId        Int
   amount        Int      @default(0)
-  modeOfPayment String
+  modeOfPayment String?
   createdAt     DateTime @default(now())
 }
 

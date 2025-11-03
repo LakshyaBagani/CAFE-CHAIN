@@ -1,16 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import AdminSidebar from '../../components/AdminSidebar';
 import { 
   Coffee, 
   DollarSign, 
   TrendingUp,
   Clock,
-  Star,
+  Utensils,
   Eye,
   BarChart3,
-  ShoppingBag,
-  LogOut
+  ShoppingBag
 } from 'lucide-react';
 import { CalendarDays } from 'lucide-react';
 
@@ -19,19 +18,18 @@ interface DashboardStats {
   totalRestaurants: number;
   totalOrders: number;
   totalRevenue: number;
-  averageRating: number;
+  mealRevenue: number;
   todayOrders: number;
   todayRevenue: number;
 }
 
 const AdminDashboard: React.FC = () => {
-  const { logout } = useAuth();
   const [restaurants, setRestaurants] = useState<any[]>([]);
   const [stats, setStats] = useState<DashboardStats>({
     totalRestaurants: 0,
     totalOrders: 0,
     totalRevenue: 0,
-    averageRating: 0,
+    mealRevenue: 0,
     todayOrders: 0,
     todayRevenue: 0
   });
@@ -57,14 +55,14 @@ const AdminDashboard: React.FC = () => {
           createdAt: '',
           totalOrders: r.totalOrders,
           totalRevenue: r.totalRevenue,
-          rating: 4.2,
+          rating: 0,
           isActive: true
         })));
         setStats({
           totalRestaurants: restaurantsFromApi.length,
           totalOrders: data.data.monthly.totalOrders,
           totalRevenue: data.data.monthly.totalRevenue,
-          averageRating: restaurantsFromApi.length > 0 ? 4.2 : 0,
+          mealRevenue: 0,
           todayOrders: data.data.today.totalOrders,
           todayRevenue: data.data.today.totalRevenue
         });
@@ -90,7 +88,10 @@ const AdminDashboard: React.FC = () => {
   // We always render dummy immediately; show skeleton shimmer over sections while fetching live data
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="flex min-h-screen bg-gray-50">
+      <AdminSidebar />
+      <div className="flex-1 ml-64">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
       <div className="mb-8">
         <div className="flex justify-between items-center">
@@ -98,13 +99,6 @@ const AdminDashboard: React.FC = () => {
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Admin Dashboard</h1>
             <p className="text-gray-600">Manage your restaurant chain operations</p>
           </div>
-          <button
-            onClick={logout}
-            className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200"
-          >
-            <LogOut className="h-4 w-4" />
-            <span>Logout</span>
-          </button>
         </div>
       </div>
 
@@ -160,15 +154,15 @@ const AdminDashboard: React.FC = () => {
 
         <div className={`bg-white rounded-xl shadow-sm border border-gray-200 p-6 ${isFetching ? 'animate-pulse' : ''}`}>
           <div className="flex items-center">
-            <div className="p-3 bg-purple-100 rounded-lg">
-              <Star className="h-6 w-6 text-purple-600" />
+            <div className="p-3 bg-green-100 rounded-lg">
+              <Utensils className="h-6 w-6 text-green-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Average Rating</p>
+              <p className="text-sm font-medium text-gray-500">Meal Revenue</p>
               {isFetching ? (
-                <div className="h-7 w-14 bg-gray-200 rounded animate-pulse" />
+                <div className="h-7 w-20 bg-gray-200 rounded animate-pulse" />
               ) : (
-                <p className="text-2xl font-bold text-gray-900">{stats.averageRating.toFixed(1)}</p>
+                <p className="text-2xl font-bold text-gray-900">₹{stats.mealRevenue.toLocaleString()}</p>
               )}
             </div>
           </div>
@@ -188,9 +182,6 @@ const AdminDashboard: React.FC = () => {
             ) : (
               <div className="text-3xl font-bold text-green-600">{stats.todayOrders}</div>
             )}
-            <div className="text-sm text-gray-500">
-              <span className="text-green-600">+12%</span> from yesterday
-            </div>
           </div>
         </div>
 
@@ -205,9 +196,6 @@ const AdminDashboard: React.FC = () => {
             ) : (
               <div className="text-3xl font-bold text-amber-600">₹{stats.todayRevenue}</div>
             )}
-            <div className="text-sm text-gray-500">
-              <span className="text-green-600">+8%</span> from yesterday
-            </div>
           </div>
         </div>
       </div>
@@ -217,13 +205,13 @@ const AdminDashboard: React.FC = () => {
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Link
-            to="/admin/restaurants"
+            to="/admin/services"
             className="flex items-center space-x-3 p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
           >
             <Coffee className="h-6 w-6 text-blue-600" />
             <div>
-              <p className="font-medium text-blue-900">Manage Restaurants</p>
-              <p className="text-sm text-blue-600">Add, edit, or remove restaurants</p>
+              <p className="font-medium text-blue-900">Manage Services</p>
+              <p className="text-sm text-blue-600">Manage restaurants and meal services</p>
             </div>
           </Link>
 
@@ -298,13 +286,6 @@ const AdminDashboard: React.FC = () => {
                     <p className="text-sm text-gray-500">Total Revenue</p>
                     <p className="font-semibold text-gray-900">₹{restaurant.totalRevenue.toLocaleString()}</p>
                   </div>
-                  <div className="text-center">
-                    <p className="text-sm text-gray-500">Average Rating</p>
-                    <div className="flex items-center space-x-1">
-                      <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                      <span className="font-semibold text-gray-900">{restaurant.rating.toFixed(1)}</span>
-                    </div>
-                  </div>
                   <Link
                     to={`/admin/restaurants/${restaurant.id}`}
                     className="flex items-center space-x-1 text-amber-600 hover:text-amber-500"
@@ -317,6 +298,8 @@ const AdminDashboard: React.FC = () => {
             </div>
             ))
           )}
+        </div>
+      </div>
         </div>
       </div>
     </div>

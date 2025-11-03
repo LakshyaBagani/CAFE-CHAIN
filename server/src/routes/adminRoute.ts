@@ -1,6 +1,6 @@
 import { Router } from "express";
 import multer from "multer";
-import { createResto , allResto , addMenu , restoOrderHistory , runAds , getAds , deleteAds, changeMenuStatus , getMenuVersion , changeOrderStatus , editMenu, deleteMenu, deliveredOrdersForDay, getDashboardStats, getRestaurantAnalytics, getAdminAnalytics, resoStatus } from "../controller/adminController";
+import { createResto , allResto , addMenu , restoOrderHistory , runAds , getAds , deleteAds, changeMenuStatus , getMenuVersion , changeOrderStatus , editMenu, deleteMenu, deliveredOrdersForDay, getDashboardStats, getRestaurantAnalytics, getAdminAnalytics, resoStatus, getAllUsers, addUserWalletBalance, getUserWalletHistory } from "../controller/adminController";
 
 const router = Router();
 const storage = multer.memoryStorage();
@@ -36,6 +36,8 @@ router.get("/dashboard/stats", getDashboardStats);
 router.get("/resto/:restaurantId/analytics", getRestaurantAnalytics);
 router.get("/analytics", getAdminAnalytics);
 router.post("/resto/:restoId/changeStatus", resoStatus);
-  
+router.get("/users", getAllUsers);
+router.post("/users/:userId/addWalletBalance", addUserWalletBalance);
+router.get("/users/:userId/walletHistory", getUserWalletHistory);
 
 export default router;

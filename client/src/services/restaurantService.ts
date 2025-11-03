@@ -44,7 +44,7 @@ class RestaurantService {
           createdAt: resto.createdAt,
           totalOrders: Math.floor(Math.random() * 100) + 10,
           totalRevenue: Math.floor(Math.random() * 5000) + 1000,
-          rating: 4.0 + Math.random() * 1.0,
+          rating: 0,
           isActive: resto.open || false,
           dailyStats: resto.dailyStats // Include daily stats from backend
         }));

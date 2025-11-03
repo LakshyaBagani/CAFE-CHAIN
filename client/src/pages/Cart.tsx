@@ -92,7 +92,8 @@ const Cart: React.FC = () => {
       }
     } catch (error: any) {
       const { showToast } = await import('../utils/toast');
-      showToast(`Order placement failed: ${error?.message || 'Unknown error'}. Please try again.`, 'error');
+      const errorMessage = error.response?.data?.message || error.message || 'Unknown error';
+      showToast(errorMessage, 'error');
     } finally {
       setIsProcessingPayment(false);
     }

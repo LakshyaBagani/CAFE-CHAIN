@@ -31,7 +31,11 @@ const Login: React.FC = () => {
       await login(formData.email, formData.password);
       navigate('/');
     } catch (err: any) {
-      setError(err.message || 'Login failed');
+      const errorMessage = err.response?.data?.message || err.message || 'Login failed';
+      setError(errorMessage);
+      // Show error toast with backend message
+      const { showToast } = await import('../utils/toast');
+      showToast(errorMessage, 'error');
     } finally {
       setLoading(false);
     }

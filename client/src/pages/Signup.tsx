@@ -42,7 +42,11 @@ const Signup: React.FC = () => {
       await sendOTP();
       setOtpSent(true);
     } catch (err: any) {
-      setError(err.message || 'Signup failed');
+      const errorMessage = err.response?.data?.message || err.message || 'Signup failed';
+      setError(errorMessage);
+      // Show error toast with backend message
+      const { showToast } = await import('../utils/toast');
+      showToast(errorMessage, 'error');
     } finally {
       setLoading(false);
     }
@@ -65,9 +69,10 @@ const Signup: React.FC = () => {
         throw new Error(response.data.message || 'Failed to send OTP');
       }
     } catch (error: any) {
-      // Show error toast
+      // Show error toast with backend message
       const { showToast } = await import('../utils/toast');
-      showToast(error.message || 'Failed to send OTP. Please try again.', 'error');
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to send OTP. Please try again.';
+      showToast(errorMessage, 'error');
       throw error;
     }
   };
@@ -99,10 +104,11 @@ const Signup: React.FC = () => {
         showToast(response.data.message || 'OTP verification failed. Please try again.', 'error');
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || err.message || 'OTP verification failed');
-      // Show error toast
+      const errorMessage = err.response?.data?.message || err.message || 'OTP verification failed';
+      setError(errorMessage);
+      // Show error toast with backend message
       const { showToast } = await import('../utils/toast');
-      showToast(err.response?.data?.message || err.message || 'OTP verification failed. Please try again.', 'error');
+      showToast(errorMessage, 'error');
     } finally {
       setOtpLoading(false);
     }
@@ -128,7 +134,11 @@ const Signup: React.FC = () => {
       }, 1000);
 
     } catch (err: any) {
-      setError(err.message || 'Failed to resend OTP');
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to resend OTP';
+      setError(errorMessage);
+      // Show error toast with backend message
+      const { showToast } = await import('../utils/toast');
+      showToast(errorMessage, 'error');
     } finally {
       setResendLoading(false);
     }

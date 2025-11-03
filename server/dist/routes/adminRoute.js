@@ -38,4 +38,7 @@ router.get("/dashboard/stats", adminController_1.getDashboardStats);
 router.get("/resto/:restaurantId/analytics", adminController_1.getRestaurantAnalytics);
 router.get("/analytics", adminController_1.getAdminAnalytics);
 router.post("/resto/:restoId/changeStatus", adminController_1.resoStatus);
+router.get("/users", adminController_1.getAllUsers);
+router.post("/users/:userId/addWalletBalance", adminController_1.addUserWalletBalance);
+router.get("/users/:userId/walletHistory", adminController_1.getUserWalletHistory);
 exports.default = router;

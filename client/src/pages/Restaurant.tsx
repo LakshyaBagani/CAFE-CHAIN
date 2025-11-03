@@ -37,7 +37,7 @@ interface Restaurant {
 const Restaurant: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { addItem } = useCart();
-  const { restaurants, fetchMenu, getRestaurantStatus } = useRestaurant();
+  const { restaurants, fetchRestaurants, fetchMenu, getRestaurantStatus } = useRestaurant();
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,8 +45,15 @@ const Restaurant: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [cartItems, setCartItems] = useState<{ [key: number]: number }>({});
 
+  // Fetch restaurants only when needed
   useEffect(() => {
-    if (id) {
+    if (restaurants.length === 0) {
+      fetchRestaurants();
+    }
+  }, [restaurants.length, fetchRestaurants]);
+
+  useEffect(() => {
+    if (id && restaurants.length > 0) {
       fetchRestaurantData();
     }
   }, [id, restaurants]);

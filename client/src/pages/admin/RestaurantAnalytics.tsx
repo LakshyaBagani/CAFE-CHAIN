@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
 import { 
-  ArrowLeft, 
   TrendingUp, 
   DollarSign, 
   Users, 
@@ -287,12 +286,6 @@ const RestaurantAnalytics: React.FC = () => {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
-            <Link 
-              to={`/admin/restaurants`} 
-              className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-white border border-gray-200 text-gray-600 hover:text-amber-600 hover:border-amber-300 hover:shadow-md transition-all duration-200"
-            >
-              <ArrowLeft className="w-5 h-5" />
-          </Link>
             <div>
               <h1 className="text-3xl font-bold text-gray-900 mb-1">Restaurant Analytics</h1>
               <p className="text-gray-600">Performance insights and sales metrics</p>

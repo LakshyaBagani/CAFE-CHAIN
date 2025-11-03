@@ -130,9 +130,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         throw new Error(data.message || 'Login failed');
       }
     } catch (error: any) {
-      // Show error toast
+      // Show error toast with backend message
       const { showToast } = await import('../utils/toast');
-      showToast(error.message || 'Login failed. Please try again.', 'error');
+      const errorMessage = error.response?.data?.message || error.message || 'Login failed. Please try again.';
+      showToast(errorMessage, 'error');
       throw error;
     }
   };
@@ -151,9 +152,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       showToast('Account created successfully! Please verify your email.', 'success');
       // Don't set user immediately, let them verify email first
     } catch (error: any) {
-      // Show error toast
+      // Show error toast with backend message
       const { showToast } = await import('../utils/toast');
-      showToast(error.message || 'Signup failed. Please try again.', 'error');
+      const errorMessage = error.response?.data?.message || error.message || 'Signup failed. Please try again.';
+      showToast(errorMessage, 'error');
       throw error;
     }
   };

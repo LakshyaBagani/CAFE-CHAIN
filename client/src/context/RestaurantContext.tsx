@@ -43,13 +43,29 @@ interface RestaurantProviderProps {
 }
 
 export const RestaurantProvider: React.FC<RestaurantProviderProps> = ({ children }) => {
-  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  // Load from localStorage on mount to persist across refreshes
+  const [restaurants, setRestaurants] = useState<Restaurant[]>(() => {
+    try {
+      const cached = localStorage.getItem('restaurants_cache');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        // Check if cache is less than 5 minutes old
+        const cacheTime = localStorage.getItem('restaurants_cache_time');
+        if (cacheTime && Date.now() - parseInt(cacheTime) < 5 * 60 * 1000) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load restaurants from cache:', e);
+    }
+    return [];
+  });
   const [restaurantStatus, setRestaurantStatus] = useState<{ [restaurantId: number]: { isOpen: boolean; message?: string } }>({});
   const [loading, setLoading] = useState(false);
 
   const fetchRestaurants = useCallback(async () => {
-    if (restaurants.length > 0) {
-      console.log('Restaurants already loaded, skipping fetch');
+    // If we already have restaurants, skip fetch
+    if (restaurants.length > 0 && !loading) {
       return;
     }
 
@@ -71,6 +87,13 @@ export const RestaurantProvider: React.FC<RestaurantProviderProps> = ({ children
           open: resto.open
         }));
         setRestaurants(restaurantData);
+        // Cache in localStorage
+        try {
+          localStorage.setItem('restaurants_cache', JSON.stringify(restaurantData));
+          localStorage.setItem('restaurants_cache_time', Date.now().toString());
+        } catch (e) {
+          console.error('Failed to cache restaurants:', e);
+        }
         console.log(`[PERF] Restaurants processed in: ${Date.now() - startTime}ms total`);
       }
     } catch (error) {
@@ -79,12 +102,9 @@ export const RestaurantProvider: React.FC<RestaurantProviderProps> = ({ children
     } finally {
       setLoading(false);
     }
-  }, [restaurants.length]);
+  }, [restaurants.length, loading]);
 
-  // Auto-fetch restaurants on mount
-  useEffect(() => {
-    fetchRestaurants();
-  }, [fetchRestaurants]);
+  // Remove auto-fetch - let components fetch when needed
 
   const fetchMenu = async (restaurantId: number): Promise<MenuItem[]> => {
     const startTime = Date.now();

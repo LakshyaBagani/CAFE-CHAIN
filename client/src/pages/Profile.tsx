@@ -115,14 +115,16 @@ const Profile: React.FC = () => {
         const { showToast } = await import('../utils/toast');
         showToast('Orders loaded successfully', 'success');
       } else {
-        setOrdersError('Failed to load order history');
+        const errorMessage = data.message || 'Failed to load order history';
+        setOrdersError(errorMessage);
         const { showToast } = await import('../utils/toast');
-        showToast('Failed to load order history', 'error');
+        showToast(errorMessage, 'error');
       }
-    } catch (error) {
-      setOrdersError('Network error. Please try again.');
+    } catch (error: any) {
+      const errorMessage = error.message || 'Network error. Please try again.';
+      setOrdersError(errorMessage);
       const { showToast } = await import('../utils/toast');
-      showToast('Network error. Please try again.', 'error');
+      showToast(errorMessage, 'error');
     } finally {
       setOrdersLoading(false);
     }

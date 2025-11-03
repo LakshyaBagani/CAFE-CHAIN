@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import AdminSidebar from '../../components/AdminSidebar';
 import { 
   BarChart3, 
   TrendingUp, 
@@ -9,8 +10,7 @@ import {
   Calendar,
   Download,
   Star,
-  ShoppingBag,
-  ArrowLeft
+  ShoppingBag
 } from 'lucide-react';
 
 interface AnalyticsData {
@@ -114,7 +114,10 @@ const AdminAnalytics: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="flex min-h-screen bg-gray-50">
+        <AdminSidebar />
+        <div className="flex-1 ml-64">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header Skeleton */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
@@ -241,27 +244,23 @@ const AdminAnalytics: React.FC = () => {
             </div>
           </div>
         </div>
+          </div>
+        </div>
       </div>
     );
   }
 
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="flex min-h-screen bg-gray-50">
+      <AdminSidebar />
+      <div className="flex-1 ml-64">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <a
-            href="/admin"
-            className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-gray-200 text-gray-600 hover:text-amber-600 hover:border-amber-300 transition-colors"
-            aria-label="Back to Admin"
-          >
-            <ArrowLeft className="w-4 h-4" />
-          </a>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Analytics Dashboard</h1>
-            <p className="text-gray-600">Insights and performance metrics for your restaurant chain</p>
-          </div>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Analytics Dashboard</h1>
+          <p className="text-gray-600">Insights and performance metrics for your restaurant chain</p>
         </div>
         
         <div className="flex items-center space-x-4">
@@ -472,6 +471,8 @@ const AdminAnalytics: React.FC = () => {
               <span className="text-purple-700 font-medium">Customer Analytics</span>
             </button>
           </div>
+        </div>
+      </div>
         </div>
       </div>
     </div>

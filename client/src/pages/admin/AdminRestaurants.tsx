@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
 import RestaurantService, { type Restaurant } from '../../services/restaurantService';
+import AdminSidebar from '../../components/AdminSidebar';
 // import { useAuth } from '../../context/AuthContext';
 import { 
   Coffee, 
@@ -13,7 +14,6 @@ import {
   Calendar,
   Search,
   Filter,
-  ArrowLeft
 } from 'lucide-react';
 
 
@@ -153,23 +153,17 @@ const AdminRestaurants: React.FC = () => {
   // Show skeleton grid while loading (no blank screen)
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="flex min-h-screen bg-gray-50">
+      <AdminSidebar />
+      <div className="flex-1 ml-64">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/** Format today's date as dd/mm/yyyy for display */}
       {(() => { return null; })()}
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center space-x-4">
-          <Link
-            to="/admin"
-            className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors"
-          >
-            <ArrowLeft className="h-5 w-5" />
-            <span>Back to Admin</span>
-          </Link>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Restaurants</h1>
-            <p className="text-gray-600">Manage your restaurant locations</p>
-          </div>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Restaurants</h1>
+          <p className="text-gray-600">Manage your restaurant locations</p>
         </div>
         <div className="flex items-center space-x-3">
           <button
@@ -338,7 +332,7 @@ const AdminRestaurants: React.FC = () => {
         )}
       </div>
 
-      {filteredRestaurants.length === 0 && (
+      {!loading && filteredRestaurants.length === 0 && (
         <div className="text-center py-12">
           <Coffee className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No restaurants found</h3>
@@ -422,7 +416,8 @@ const AdminRestaurants: React.FC = () => {
           </div>
         </div>
       )}
-
+        </div>
+      </div>
     </div>
   );
 };

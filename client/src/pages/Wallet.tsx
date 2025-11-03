@@ -115,14 +115,16 @@ const WalletPage: React.FC = () => {
           setHistoryLoaded(true); // Mark as loaded if it wasn't before
         }
       } else {
-        // Error toast
+        // Error toast with backend message
         const { showToast } = await import('../utils/toast');
-        showToast('Failed to top up', 'error');
+        const errorMessage = response.data.message || 'Failed to top up';
+        showToast(errorMessage, 'error');
       }
-    } catch (error) {
-      // Error toast
+    } catch (error: any) {
+      // Error toast with backend message
       const { showToast } = await import('../utils/toast');
-      showToast('Failed to top up', 'error');
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to top up';
+      showToast(errorMessage, 'error');
     } finally {
       setIsToppingUp(false);
       setBalanceLoading(false);

@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getDashboardStats = exports.deleteMenu = exports.editMenu = exports.changeOrderStatus = exports.resoStatus = exports.getMenuVersion = exports.changeMenuStatus = exports.deleteAds = exports.getAds = exports.runAds = exports.deliveredOrdersForDay = exports.restoOrderHistory = exports.addMenu = exports.getAdminAnalytics = exports.getRestaurantAnalytics = exports.allResto = exports.createResto = void 0;
+exports.getUserWalletHistory = exports.addUserWalletBalance = exports.getAllUsers = exports.getDashboardStats = exports.deleteMenu = exports.editMenu = exports.changeOrderStatus = exports.resoStatus = exports.getMenuVersion = exports.changeMenuStatus = exports.deleteAds = exports.getAds = exports.runAds = exports.deliveredOrdersForDay = exports.restoOrderHistory = exports.addMenu = exports.getAdminAnalytics = exports.getRestaurantAnalytics = exports.allResto = exports.createResto = void 0;
 const db_1 = __importDefault(require("../config/db"));
 const supabaseConfig_1 = require("../config/supabaseConfig");
 const bcrypt_1 = __importDefault(require("bcrypt"));
@@ -55,6 +55,7 @@ const allResto = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 id: true,
                 name: true,
                 location: true,
+                number: true,
                 open: true,
                 menuVersion: true
             },
@@ -977,3 +978,88 @@ const getDashboardStats = (req, res) => __awaiter(void 0, void 0, void 0, functi
     }
 });
 exports.getDashboardStats = getDashboardStats;
+const getAllUsers = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const usersData = yield db_1.default.user.findMany({
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                number: true,
+                isVerify: true,
+                balance: true
+            },
+            orderBy: { id: 'desc' }
+        });
+        // Convert BigInt number to string for JSON serialization
+        const users = usersData.map(user => (Object.assign(Object.assign({}, user), { number: user.number.toString() })));
+        return res.status(200).send({
+            success: true,
+            message: "Users fetched successfully",
+            users: users
+        });
+    }
+    catch (error) {
+        console.error("Error fetching users:", error);
+        return res.status(500).send({ success: false, message: "Internal server error" });
+    }
+});
+exports.getAllUsers = getAllUsers;
+const addUserWalletBalance = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { userId } = req.params;
+    const { amount } = req.body;
+    const modeOfPayment = "Pay at Cafe";
+    try {
+        if (!userId || !amount) {
+            return res.status(400).send({ success: false, message: "User ID and amount are required" });
+        }
+        if (parseInt(amount) <= 0) {
+            return res.status(400).send({ success: false, message: "Amount must be greater than 0" });
+        }
+        const user = yield db_1.default.user.findUnique({ where: { id: parseInt(userId) } });
+        if (!user) {
+            return res.status(400).send({ success: false, message: "User not found" });
+        }
+        const userWallet = yield db_1.default.userWallet.create({
+            data: { userId: parseInt(userId), amount: parseInt(amount), modeOfPayment }
+        });
+        const updatedBalance = user.balance + parseInt(amount);
+        yield db_1.default.user.update({ where: { id: parseInt(userId) }, data: { balance: updatedBalance } });
+        return res.status(200).send({
+            success: true,
+            message: "Wallet balance updated successfully",
+            userWallet,
+            balance: updatedBalance
+        });
+    }
+    catch (error) {
+        console.error('Error adding wallet balance:', error);
+        return res.status(500).send({ success: false, message: "Internal server error" });
+    }
+});
+exports.addUserWalletBalance = addUserWalletBalance;
+const getUserWalletHistory = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { userId } = req.params;
+    try {
+        if (!userId) {
+            return res.status(400).send({ success: false, message: "User ID is required" });
+        }
+        const history = yield db_1.default.userWallet.findMany({
+            where: { userId: parseInt(userId) },
+            orderBy: { createdAt: 'desc' },
+            take: 50,
+            select: {
+                id: true,
+                amount: true,
+                modeOfPayment: true,
+                createdAt: true
+            }
+        });
+        return res.status(200).send({ success: true, message: "Wallet history fetched successfully", history });
+    }
+    catch (error) {
+        console.error('Error fetching wallet history:', error);
+        return res.status(500).send({ success: false, message: "Internal server error" });
+    }
+});
+exports.getUserWalletHistory = getUserWalletHistory;

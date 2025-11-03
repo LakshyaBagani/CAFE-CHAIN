@@ -24,6 +24,9 @@ import AdminAnalytics from './pages/admin/AdminAnalytics';
   import RestaurantAnalytics from './pages/admin/RestaurantAnalytics';
 import RestaurantOrders from './pages/admin/RestaurantOrders';
 import AdminDeliveredOrders from './pages/admin/AdminDeliveredOrders';
+import Services from './pages/admin/Services';
+import Users from './pages/admin/Users';
+import UserWalletHistory from './pages/admin/UserWalletHistory';
 import { HomePageSkeleton } from './components/SkeletonLoader';
 import AdminNavigation from './components/AdminNavigation';
 
@@ -198,6 +201,21 @@ const AppRoutes: React.FC = () => {
                 <Route path="/admin/delivered-orders" element={
                   <AdminRoute>
                     <AdminDeliveredOrders />
+                  </AdminRoute>
+                } />
+                <Route path="/admin/services" element={
+                  <AdminRoute>
+                    <Services />
+                  </AdminRoute>
+                } />
+                <Route path="/admin/users" element={
+                  <AdminRoute>
+                    <Users />
+                  </AdminRoute>
+                } />
+                <Route path="/admin/users/:userId/wallet-history" element={
+                  <AdminRoute>
+                    <UserWalletHistory />
                   </AdminRoute>
                 } />
         

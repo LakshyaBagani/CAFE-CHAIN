@@ -4,7 +4,6 @@ import axios from 'axios';
 import RestaurantService, { type Restaurant } from '../../services/restaurantService';
 import { formatDate } from '../../utils/dateUtils';
 import {
-  ArrowLeft,
   Clock,
   Truck,
   RefreshCw,
@@ -333,13 +332,6 @@ const RestaurantOrders: React.FC = () => {
         <div className="bg-white rounded-2xl shadow-xl p-8 mb-8 border border-gray-100">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-6">
-              <Link
-                to="/admin/restaurants"
-                className="flex items-center space-x-2 text-gray-600 hover:text-amber-600 transition-colors duration-200 bg-gray-50 hover:bg-amber-50 px-4 py-2 rounded-xl"
-              >
-                <ArrowLeft className="h-5 w-5" />
-                <span className="font-medium">Back to Restaurants</span>
-              </Link>
               <div>
                 <h1 className="text-4xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent mb-2">
                   {restaurant?.name || 'Restaurant'} Orders

@@ -36,7 +36,14 @@ const Home: React.FC = () => {
   const { vegMode, setVegMode } = useVegMode();
   const { addItem, removeItem, updateQuantity, items: cartItems, setCurrentRestaurant } = useCart();
   const { setSelectedCafe, userHasSelectedCafe, isInitialized } = useCafe();
-  const { restaurants, fetchMenu, getRestaurantStatus } = useRestaurant();
+  const { restaurants, fetchRestaurants, fetchMenu, getRestaurantStatus } = useRestaurant();
+
+  // Fetch restaurants only when needed (lazy loading)
+  useEffect(() => {
+    if (restaurants.length === 0) {
+      fetchRestaurants();
+    }
+  }, [restaurants.length, fetchRestaurants]);
   const [trendingMenus, setTrendingMenus] = useState<MenuItem[]>([]);
   const [allMenuItems, setAllMenuItems] = useState<MenuItem[]>([]);
   const [trendingLoading, setTrendingLoading] = useState(false);

@@ -45,6 +45,7 @@ export const allResto = async (req: Request, res: Response) => {
         id: true,
         name: true,
         location: true,
+        number: true,
         open: true,
         menuVersion: true
       },
@@ -1069,5 +1070,103 @@ export const getDashboardStats = async (req: Request, res: Response) => {
     });
   } catch (error) {
     return res.status(500).send({ success: false, message: error });
+  }
+};
+
+export const getAllUsers = async (req: Request, res: Response) => {
+  try {
+    const usersData = await prisma.user.findMany({
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        number: true,
+        isVerify: true,
+        balance: true
+      },
+      orderBy: { id: 'desc' }
+    });
+    
+    // Convert BigInt number to string for JSON serialization
+    const users = usersData.map(user => ({
+      ...user,
+      number: user.number.toString()
+    }));
+    
+    return res.status(200).send({
+      success: true,
+      message: "Users fetched successfully",
+      users: users
+    });
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    return res.status(500).send({ success: false, message: "Internal server error" });
+  }
+};
+
+export const addUserWalletBalance = async (req: Request, res: Response) => {
+  const { userId } = req.params;
+  const { amount } = req.body;
+  const modeOfPayment = "Pay at Cafe";
+  
+  try {
+    if (!userId || !amount) {
+      return res.status(400).send({ success: false, message: "User ID and amount are required" });
+    }
+
+    if (parseInt(amount) <= 0) {
+      return res.status(400).send({ success: false, message: "Amount must be greater than 0" });
+    }
+    
+    const user = await prisma.user.findUnique({ where: { id: parseInt(userId) } });
+
+    if (!user) {
+      return res.status(400).send({ success: false, message: "User not found" });
+    }
+
+    const userWallet = await prisma.userWallet.create({
+      data: { userId: parseInt(userId), amount: parseInt(amount), modeOfPayment }
+    });
+
+    const updatedBalance = user.balance + parseInt(amount);
+    await prisma.user.update({ where: { id: parseInt(userId) }, data: { balance: updatedBalance } });
+
+    return res.status(200).send({ 
+      success: true, 
+      message: "Wallet balance updated successfully", 
+      userWallet, 
+      balance: updatedBalance 
+    });
+    
+  } catch (error) {
+    console.error('Error adding wallet balance:', error);
+    return res.status(500).send({ success: false, message: "Internal server error" });
+  }
+};
+
+export const getUserWalletHistory = async (req: Request, res: Response) => {
+  const { userId } = req.params;
+  
+  try {
+    if (!userId) {
+      return res.status(400).send({ success: false, message: "User ID is required" });
+    }
+    
+    const history = await prisma.userWallet.findMany({ 
+      where: { userId: parseInt(userId) },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+      select: {
+        id: true,
+        amount: true,
+        modeOfPayment: true,
+        createdAt: true
+      }
+    });
+    
+    return res.status(200).send({ success: true, message: "Wallet history fetched successfully", history });
+  } catch (error) {
+    console.error('Error fetching wallet history:', error);
+    return res.status(500).send({ success: false, message: "Internal server error" });
   }
 };

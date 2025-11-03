@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
-import { Calendar, IndianRupee, PackageCheck, ArrowLeft } from 'lucide-react';
+import AdminSidebar from '../../components/AdminSidebar';
+import { Calendar, IndianRupee, PackageCheck } from 'lucide-react';
 
 interface DeliveredOrderItem {
   id: number;
@@ -23,27 +24,60 @@ interface DeliveredOrder {
   user: { id: number; name: string; email: string; number?: string };
 }
 
+interface Restaurant {
+  id: number;
+  name: string;
+  location: string;
+}
+
 const AdminDeliveredOrders: React.FC = () => {
   const [date, setDate] = useState<string>(() => new Date().toISOString().slice(0,10));
   const [orders, setOrders] = useState<DeliveredOrder[]>([]);
   const [loading, setLoading] = useState(false);
+  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [selectedRestoId, setSelectedRestoId] = useState<number | null>(null);
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});
 
+  // Fetch restaurants dynamically from API
   useEffect(() => {
-    try {
-      const params = new URLSearchParams(window.location.search);
-      const paramRestoId = params.get('restoId');
-      const cached = localStorage.getItem('allResto_cache');
-      if (cached) {
-        const restos = JSON.parse(cached);
-        if (paramRestoId) {
-          setSelectedRestoId(parseInt(paramRestoId));
-        } else if (restos?.length) {
-          setSelectedRestoId(restos[0].id);
+    const fetchRestaurants = async () => {
+      try {
+        const response = await axios.get('https://cafe-chain.onrender.com/admin/allResto', {
+          withCredentials: true
+        });
+        if (response.data?.success && response.data?.resto) {
+          const restos = response.data.resto.map((r: any) => ({
+            id: r.id,
+            name: r.name,
+            location: r.location
+          }));
+          setRestaurants(restos);
+          
+          // Set selected restaurant
+          const params = new URLSearchParams(window.location.search);
+          const paramRestoId = params.get('restoId');
+          if (paramRestoId && restos.find((r: Restaurant) => r.id === parseInt(paramRestoId))) {
+            setSelectedRestoId(parseInt(paramRestoId));
+          } else if (restos.length > 0) {
+            setSelectedRestoId(restos[0].id);
+          }
         }
+      } catch (error) {
+        console.error('Failed to fetch restaurants:', error);
+        // Fallback to localStorage cache if API fails
+        try {
+          const cached = localStorage.getItem('allResto_cache');
+          if (cached) {
+            const restos = JSON.parse(cached);
+            setRestaurants(restos);
+            if (restos.length > 0) {
+              setSelectedRestoId(restos[0].id);
+            }
+          }
+        } catch {}
       }
-    } catch {}
+    };
+    fetchRestaurants();
   }, []);
 
   const fetchDelivered = async () => {
@@ -71,18 +105,16 @@ const AdminDeliveredOrders: React.FC = () => {
   const totalRevenue = useMemo(() => orders.reduce((s, o) => s + o.totalPrice, 0), [orders]);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="flex min-h-screen bg-gray-50">
+      <AdminSidebar />
+      <div className="flex-1 ml-64">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
       <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl p-6 mb-8 border border-amber-200">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link to="/admin" className="text-amber-700 hover:text-amber-900 transition-colors bg-white/80 px-4 py-2 rounded-xl hover:bg-white">
-              <ArrowLeft className="w-5 h-5" />
-            </Link>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Delivered Orders</h1>
-              <p className="text-amber-700">View and track completed orders</p>
-            </div>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Delivered Orders</h1>
+            <p className="text-amber-700">View and track completed orders</p>
           </div>
           <div className="flex items-center gap-4">
             <div className="text-right">
@@ -96,16 +128,21 @@ const AdminDeliveredOrders: React.FC = () => {
       {/* Controls */}
       <div className="bg-white rounded-2xl p-6 mb-8 shadow-sm border border-gray-200">
         <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1">
+          <div className="flex-1 relative">
             <label className="block text-sm font-medium text-gray-700 mb-2">Restaurant</label>
             <select
               value={selectedRestoId ?? ''}
               onChange={(e) => setSelectedRestoId(parseInt(e.target.value))}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-all duration-200"
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-all duration-200 relative z-50"
+              style={{ zIndex: 9999 }}
             >
-              {(JSON.parse(localStorage.getItem('allResto_cache') || '[]') as any[]).map(r => (
-                <option key={r.id} value={r.id}>{r.name}</option>
-              ))}
+              {restaurants.length === 0 ? (
+                <option value="">Loading restaurants...</option>
+              ) : (
+                restaurants.map(r => (
+                  <option key={r.id} value={r.id}>{r.name}</option>
+                ))
+              )}
             </select>
           </div>
           <div className="flex-1">
@@ -250,6 +287,8 @@ const AdminDeliveredOrders: React.FC = () => {
           ))}
         </div>
       )}
+        </div>
+      </div>
     </div>
   );
 };
