@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
 import axios from 'axios';
 
 interface Restaurant {

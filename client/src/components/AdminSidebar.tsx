@@ -7,7 +7,6 @@ import {
   Settings,
   CalendarDays,
   LogOut,
-  Utensils,
   Users
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';

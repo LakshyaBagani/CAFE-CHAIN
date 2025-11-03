@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import RestaurantService, { type Restaurant } from '../../services/restaurantService';
 import AdminSidebar from '../../components/AdminSidebar';
 // import { useAuth } from '../../context/AuthContext';
