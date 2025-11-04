@@ -202,7 +202,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     </div>
                     <div>
                       <span className="text-xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
-                        CafeChain
+                        Sojo's Cafe
                       </span>
                       <div className="text-xs text-gray-500 font-medium">Admin Portal</div>
                     </div>

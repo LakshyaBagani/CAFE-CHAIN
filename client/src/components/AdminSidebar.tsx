@@ -2,7 +2,6 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
-  Coffee, 
   BarChart3, 
   Settings,
   CalendarDays,
@@ -22,38 +21,27 @@ const AdminSidebar: React.FC = () => {
     navigate('/login');
   };
 
-  const menuItems = [
-    {
-      name: 'Dashboard',
-      path: '/admin',
-      icon: LayoutDashboard,
-    },
-    {
-      name: 'Services',
-      path: '/admin/services',
-      icon: Settings,
-    },
-    {
-      name: 'Restaurants',
-      path: '/admin/restaurants',
-      icon: Coffee,
-    },
-    {
-      name: 'Analytics',
-      path: '/admin/analytics',
-      icon: BarChart3,
-    },
-    {
-      name: 'Delivered Orders',
-      path: '/admin/delivered-orders',
-      icon: CalendarDays,
-    },
-    {
-      name: 'Users',
-      path: '/admin/users',
-      icon: Users,
-    },
+  const isMealsSection = location.pathname.startsWith('/admin/meals');
+  const isServicesPage = location.pathname.startsWith('/admin/services');
+
+  const baseItems = [
+    { name: 'Dashboard', path: '/admin', icon: LayoutDashboard },
+    { name: 'Services', path: '/admin/services', icon: Settings },
   ];
+
+  const cafeOnlyItems = [
+    { name: 'Analytics', path: '/admin/analytics', icon: BarChart3 },
+    { name: 'Delivered Orders', path: '/admin/delivered-orders', icon: CalendarDays },
+    { name: 'Users', path: '/admin/users', icon: Users },
+  ];
+
+  const menuItems = isServicesPage
+    ? baseItems
+    : [
+        ...baseItems,
+        // Show Cafe-only items unless we are inside Meals section
+        ...(!isMealsSection ? cafeOnlyItems : []),
+      ];
 
   const isActive = (path: string) => {
     if (path === '/admin') {
@@ -63,11 +51,11 @@ const AdminSidebar: React.FC = () => {
   };
 
   return (
-    <div className="fixed left-0 top-0 h-full w-64 bg-white border-r border-gray-200 shadow-sm z-50" style={{ zIndex: 9999 }}>
+    <div className="hidden md:block fixed left-0 top-0 h-full w-64 bg-white border-r border-gray-200 shadow-sm z-50" style={{ zIndex: 9999 }}>
       <div className="flex flex-col h-full">
         {/* Logo/Header */}
-        <div className="p-6 border-b border-gray-200">
-          <h1 className="text-2xl font-bold text-gray-900">CafeChain</h1>
+            <div className="p-6 border-b border-gray-200">
+              <h1 className="text-2xl font-bold text-gray-900">Sojo's Cafe</h1>
           <p className="text-sm text-gray-500 mt-1">Admin Panel</p>
         </div>
 

@@ -25,8 +25,12 @@ import AdminAnalytics from './pages/admin/AdminAnalytics';
 import RestaurantOrders from './pages/admin/RestaurantOrders';
 import AdminDeliveredOrders from './pages/admin/AdminDeliveredOrders';
 import Services from './pages/admin/Services';
+import Meals from './pages/admin/Meals';
 import Users from './pages/admin/Users';
 import UserWalletHistory from './pages/admin/UserWalletHistory';
+import ChooseExperience from './pages/ChooseExperience';
+import MealPlan from './pages/MealPlan';
+import CustomMealSelection from './pages/CustomMealSelection';
 import { HomePageSkeleton } from './components/SkeletonLoader';
 import AdminNavigation from './components/AdminNavigation';
 
@@ -84,8 +88,15 @@ const AppRoutes: React.FC = () => {
 
   // Public Route Component (redirect to home if logged in)
   const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    // If user is logged in, redirect to home
-    return user ? <Navigate to="/" /> : <>{children}</>;
+    // If user is logged in, redirect based on preferred entry
+    if (user) {
+      const pref = localStorage.getItem('preferred_entry');
+      if (!pref) return <Navigate to="/choose" replace />;
+      if (pref === 'meal') return <Navigate to="/meal-plan" replace />;
+      // For 'cafe', go to home page
+      return <Navigate to="/" replace />;
+    }
+    return <>{children}</>;
   };
 
           return (
@@ -107,9 +118,33 @@ const AppRoutes: React.FC = () => {
         {/* User Routes - All protected */}
         <Route path="/" element={
           <ProtectedRoute>
-            <Layout>
-              <Home />
-            </Layout>
+            {(() => {
+              const pref = localStorage.getItem('preferred_entry');
+              if (!pref) return <Navigate to="/choose" replace />;
+              if (pref === 'meal') return <Navigate to="/meal-plan" replace />;
+              // For 'cafe' or any other value, show Home page
+              return (
+                <Layout>
+                  <Home />
+                </Layout>
+              );
+            })()}
+          </ProtectedRoute>
+        } />
+        {/* Chooser and Meal Plan */}
+        <Route path="/choose" element={
+          <ProtectedRoute>
+            <ChooseExperience />
+          </ProtectedRoute>
+        } />
+        <Route path="/meal-plan" element={
+          <ProtectedRoute>
+            <MealPlan />
+          </ProtectedRoute>
+        } />
+        <Route path="/custom-meal-selection" element={
+          <ProtectedRoute>
+            <CustomMealSelection />
           </ProtectedRoute>
         } />
         <Route path="/cafe/:restoId" element={
@@ -206,6 +241,11 @@ const AppRoutes: React.FC = () => {
                 <Route path="/admin/services" element={
                   <AdminRoute>
                     <Services />
+                  </AdminRoute>
+                } />
+                <Route path="/admin/meals" element={
+                  <AdminRoute>
+                    <Meals />
                   </AdminRoute>
                 } />
                 <Route path="/admin/users" element={

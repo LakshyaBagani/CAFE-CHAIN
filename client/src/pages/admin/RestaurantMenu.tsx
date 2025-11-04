@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
-import { Search, Utensils, Edit, Trash2, Plus, X, Save, Eye, EyeOff, Upload } from 'lucide-react';
+import { Search, Utensils, Edit, Trash2, Plus, X, Save, Eye, EyeOff, Upload, ArrowLeft } from 'lucide-react';
 
 interface MenuItem {
   id: number;
@@ -384,6 +384,14 @@ const RestaurantMenu: React.FC = () => {
         <div className="bg-white rounded-2xl shadow-lg p-6 mb-8 border border-gray-100">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
+              <Link
+                to={`/admin/restaurants`}
+                className="inline-flex items-center space-x-2 text-gray-600 hover:text-gray-900 px-4 py-2 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
+                aria-label="Back to Orders"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span>Back</span>
+              </Link>
               <div>
                 <h1 className="text-3xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
                   Menu Management

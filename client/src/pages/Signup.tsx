@@ -24,11 +24,16 @@ const Signup: React.FC = () => {
   const { signup } = useAuth();
   const navigate = useNavigate();
 
+  const isValidPhone = (value: string) => /^\d{10}$/.test(value.trim());
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    const { name, value } = e.target;
+    if (name === 'number') {
+      const digitsOnly = value.replace(/\D/g, '').slice(0, 10);
+      setFormData(prev => ({ ...prev, number: digitsOnly }));
+      return;
+    }
+    setFormData(prev => ({ ...prev, [name]: value } as any));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -37,6 +42,12 @@ const Signup: React.FC = () => {
     setError(null);
 
     try {
+      if (!isValidPhone(formData.number)) {
+        const { showToast } = await import('../utils/toast');
+        showToast('Enter a valid 10-digit phone number', 'warning');
+        setLoading(false);
+        return;
+      }
       await signup(formData.name, formData.email, formData.password, formData.number);
       // Send OTP after successful signup
       await sendOTP();
@@ -95,7 +106,7 @@ const Signup: React.FC = () => {
         setSuccess(true);
         // Show success toast
         const { showToast } = await import('../utils/toast');
-        showToast('Email verified successfully! Welcome to Cafe Chain!', 'success');
+        showToast("Email verified successfully! Welcome to Sojo's Cafe!", 'success');
         navigate('/');
       } else {
         setError(response.data.message || 'OTP verification failed');
@@ -152,7 +163,7 @@ const Signup: React.FC = () => {
             <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-amber-500 to-orange-600 rounded-full mb-6">
               <CheckCircle className="w-10 h-10 text-white" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Welcome to CafeChain!</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Welcome to Sojo's Cafe!</h2>
             <p className="text-gray-600 mb-6">
               Your account has been verified successfully. Redirecting you to the home page...
             </p>
@@ -285,7 +296,7 @@ const Signup: React.FC = () => {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl shadow-lg mb-4">
             <Coffee className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Join CafeChain</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Join Sojo's Cafe</h1>
           <p className="text-gray-600">Create your account</p>
         </div>
 
@@ -351,6 +362,9 @@ const Signup: React.FC = () => {
                   name="number"
                   value={formData.number}
                   onChange={handleChange}
+                  inputMode="numeric"
+                  maxLength={10}
+                  minLength={10}
                   className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
                   placeholder="Enter your phone number"
                   required

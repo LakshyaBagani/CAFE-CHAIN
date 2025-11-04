@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getUserWalletHistory = exports.addUserWalletBalance = exports.getAllUsers = exports.getDashboardStats = exports.deleteMenu = exports.editMenu = exports.changeOrderStatus = exports.resoStatus = exports.getMenuVersion = exports.changeMenuStatus = exports.deleteAds = exports.getAds = exports.runAds = exports.deliveredOrdersForDay = exports.restoOrderHistory = exports.addMenu = exports.getAdminAnalytics = exports.getRestaurantAnalytics = exports.allResto = exports.createResto = void 0;
+exports.bulkSetMealPlans = exports.getMealPlans = exports.setMealPlan = exports.getUserWalletHistory = exports.addUserWalletBalance = exports.getAllUsers = exports.getDashboardStats = exports.deleteMenu = exports.editMenu = exports.changeOrderStatus = exports.resoStatus = exports.getMenuVersion = exports.changeMenuStatus = exports.deleteAds = exports.getAds = exports.runAds = exports.deliveredOrdersForDay = exports.restoOrderHistory = exports.addMenu = exports.getAdminAnalytics = exports.getRestaurantAnalytics = exports.allResto = exports.createResto = void 0;
 const db_1 = __importDefault(require("../config/db"));
 const supabaseConfig_1 = require("../config/supabaseConfig");
 const bcrypt_1 = __importDefault(require("bcrypt"));
@@ -1063,3 +1063,67 @@ const getUserWalletHistory = (req, res) => __awaiter(void 0, void 0, void 0, fun
     }
 });
 exports.getUserWalletHistory = getUserWalletHistory;
+const setMealPlan = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { day, time, menu } = req.body;
+        if (!day || !time) {
+            return res.status(400).send({ success: false, message: 'day and time are required' });
+        }
+        // Replace existing meal plan for given day+time or create new
+        const existing = yield db_1.default.mealPlan.findFirst({ where: { day, time } });
+        if (existing) {
+            yield db_1.default.mealPlan.update({ where: { id: existing.id }, data: { menu: menu || '' } });
+        }
+        else {
+            yield db_1.default.mealPlan.create({ data: { day, time, menu: menu || '' } });
+        }
+        return res.status(200).send({ success: true, message: 'Meal plan saved' });
+    }
+    catch (error) {
+        console.error('Error saving meal plan:', error);
+        return res.status(500).send({ success: false, message: 'Internal server error' });
+    }
+});
+exports.setMealPlan = setMealPlan;
+const getMealPlans = (_req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const plans = yield db_1.default.mealPlan.findMany();
+        return res.status(200).send({ success: true, plans });
+    }
+    catch (error) {
+        console.error('Error fetching meal plans:', error);
+        return res.status(500).send({ success: false, message: 'Internal server error' });
+    }
+});
+exports.getMealPlans = getMealPlans;
+const bulkSetMealPlans = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { plans } = req.body;
+        if (!Array.isArray(plans) || plans.length === 0) {
+            return res.status(400).send({ success: false, message: 'plans array is required' });
+        }
+        // Validate entries
+        for (const p of plans) {
+            if (!(p === null || p === void 0 ? void 0 : p.day) || !(p === null || p === void 0 ? void 0 : p.time)) {
+                return res.status(400).send({ success: false, message: 'Each plan needs day and time' });
+            }
+        }
+        yield db_1.default.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
+            for (const p of plans) {
+                const existing = yield tx.mealPlan.findFirst({ where: { day: p.day, time: p.time } });
+                if (existing) {
+                    yield tx.mealPlan.update({ where: { id: existing.id }, data: { menu: p.menu || '' } });
+                }
+                else {
+                    yield tx.mealPlan.create({ data: { day: p.day, time: p.time, menu: p.menu || '' } });
+                }
+            }
+        }));
+        return res.status(200).send({ success: true, message: 'Meal plans saved' });
+    }
+    catch (error) {
+        console.error('Error bulk saving meal plans:', error);
+        return res.status(500).send({ success: false, message: 'Internal server error' });
+    }
+});
+exports.bulkSetMealPlans = bulkSetMealPlans;

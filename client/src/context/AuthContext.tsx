@@ -161,26 +161,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = async () => {
+    // Optimistically clear local auth state for immediate UI update
+    setUser(null);
+    localStorage.removeItem('auth_user');
+    localStorage.removeItem('auth_user_ts');
+    localStorage.removeItem('admin_cookie');
+
+    // Fire-and-forget backend logout; do not block UI/navigation
     try {
-      await axios.post('https://cafe-chain.onrender.com/auth/logout', {}, {
-        withCredentials: true
-      });
-      setUser(null);
-      localStorage.removeItem('auth_user');
-      localStorage.removeItem('auth_user_ts');
-      localStorage.removeItem('admin_cookie');
-      
-      // Show success toast
-      const { showToast } = await import('../utils/toast');
-      showToast('Logged out successfully!', 'success');
-    } catch (error) {
-      // Even if backend logout fails, clear local state
-      setUser(null);
-      localStorage.removeItem('auth_user');
-      localStorage.removeItem('auth_user_ts');
-      localStorage.removeItem('admin_cookie');
-      
-      // Show success toast even if backend fails
+      await axios.post('https://cafe-chain.onrender.com/auth/logout', {}, { withCredentials: true });
+    } catch (_) {
+      // ignore network errors
+    } finally {
       const { showToast } = await import('../utils/toast');
       showToast('Logged out successfully!', 'success');
     }

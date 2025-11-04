@@ -1,25 +1,58 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Coffee, Utensils } from 'lucide-react';
+import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Coffee, Utensils, Menu, X, ArrowLeft, LogOut } from 'lucide-react';
 import AdminSidebar from '../../components/AdminSidebar';
+import { useAuth } from '../../context/AuthContext';
 
 const Services: React.FC = () => {
   const navigate = useNavigate();
+  const { logout } = useAuth();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleRestaurantClick = () => {
     navigate('/admin/restaurants');
   };
 
   const handleMealClick = () => {
-    // Navigate to meal management page when implemented
-    // For now, just show a message
-    alert('Meal management feature coming soon!');
+    navigate('/admin/meals');
   };
 
   return (
     <div className="flex min-h-screen bg-gray-50">
       <AdminSidebar />
-      <div className="flex-1 ml-64">
+          <div className="flex-1 md:ml-64">
+        {/* Mobile Header */}
+        <div className="md:hidden sticky top-0 z-40 bg-white border-b border-gray-200">
+          <div className="flex items-center justify-between px-4 py-3">
+            <button onClick={() => navigate(-1)} className="flex items-center space-x-2 text-gray-700">
+              <ArrowLeft className="h-5 w-5" />
+              <span className="font-medium">Back</span>
+            </button>
+            <div className="font-bold">Admin - Services</div>
+            <button onClick={() => setMobileMenuOpen(true)} className="text-gray-700">
+              <Menu className="h-6 w-6" />
+            </button>
+          </div>
+          {mobileMenuOpen && (
+            <>
+              <div className="fixed inset-0 bg-black/30 z-40" onClick={() => setMobileMenuOpen(false)} />
+              <div className="fixed top-0 right-0 h-full w-72 bg-white shadow-xl z-50 p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="font-bold">Menu</div>
+                  <button onClick={() => setMobileMenuOpen(false)}><X className="h-6 w-6" /></button>
+                </div>
+                <nav className="space-y-2">
+                  <Link to="/admin" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 rounded-lg hover:bg-gray-100">Dashboard</Link>
+                  <Link to="/admin/services" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 rounded-lg hover:bg-gray-100">Services</Link>
+                  <Link to="/admin/analytics" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 rounded-lg hover:bg-gray-100">Analytics</Link>
+                  <Link to="/admin/delivered-orders" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 rounded-lg hover:bg-gray-100">Delivered Orders</Link>
+                  <Link to="/admin/users" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 rounded-lg hover:bg-gray-100">Users</Link>
+                  <button onClick={() => { setMobileMenuOpen(false); logout(); navigate('/login'); }} className="w-full flex items-center justify-start space-x-2 px-3 py-2 rounded-lg text-red-600 hover:bg-red-50"><LogOut className="h-5 w-5" /><span>Logout</span></button>
+                </nav>
+              </div>
+            </>
+          )}
+        </div>
         <div className="max-w-6xl mx-auto px-6 py-8">
           {/* Header */}
           <div className="mb-8">

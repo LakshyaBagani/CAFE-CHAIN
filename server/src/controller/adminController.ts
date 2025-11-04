@@ -1170,3 +1170,66 @@ export const getUserWalletHistory = async (req: Request, res: Response) => {
     return res.status(500).send({ success: false, message: "Internal server error" });
   }
 };
+
+export const setMealPlan = async (req: Request, res: Response) => {
+  try {
+    const { day, time, menu } = req.body as { day?: string; time?: string; menu?: string };
+    if (!day || !time) {
+      return res.status(400).send({ success: false, message: 'day and time are required' });
+    }
+
+    // Replace existing meal plan for given day+time or create new
+    const existing = await prisma.mealPlan.findFirst({ where: { day, time } });
+    if (existing) {
+      await prisma.mealPlan.update({ where: { id: existing.id }, data: { menu: menu || '' } });
+    } else {
+      await prisma.mealPlan.create({ data: { day, time, menu: menu || '' } });
+    }
+    return res.status(200).send({ success: true, message: 'Meal plan saved' });
+  } catch (error) {
+    console.error('Error saving meal plan:', error);
+    return res.status(500).send({ success: false, message: 'Internal server error' });
+  }
+};
+
+export const getMealPlans = async (_req: Request, res: Response) => {
+  try {
+    const plans = await (prisma as any).mealPlan.findMany();
+    return res.status(200).send({ success: true, plans });
+  } catch (error) {
+    console.error('Error fetching meal plans:', error);
+    return res.status(500).send({ success: false, message: 'Internal server error' });
+  }
+};
+
+export const bulkSetMealPlans = async (req: Request, res: Response) => {
+  try {
+    const { plans } = req.body as { plans?: Array<{ day: string; time: string; menu: string }> };
+    if (!Array.isArray(plans) || plans.length === 0) {
+      return res.status(400).send({ success: false, message: 'plans array is required' });
+    }
+
+    // Validate entries
+    for (const p of plans) {
+      if (!p?.day || !p?.time) {
+        return res.status(400).send({ success: false, message: 'Each plan needs day and time' });
+      }
+    }
+
+    await (prisma as any).$transaction(async (tx: any) => {
+      for (const p of plans) {
+        const existing = await tx.mealPlan.findFirst({ where: { day: p.day, time: p.time } });
+        if (existing) {
+          await tx.mealPlan.update({ where: { id: existing.id }, data: { menu: p.menu || '' } });
+        } else {
+          await tx.mealPlan.create({ data: { day: p.day, time: p.time, menu: p.menu || '' } });
+        }
+      }
+    });
+
+    return res.status(200).send({ success: true, message: 'Meal plans saved' });
+  } catch (error) {
+    console.error('Error bulk saving meal plans:', error);
+    return res.status(500).send({ success: false, message: 'Internal server error' });
+  }
+};

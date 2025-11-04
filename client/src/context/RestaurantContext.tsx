@@ -26,6 +26,7 @@ interface RestaurantContextType {
   fetchRestaurants: () => Promise<void>;
   fetchMenu: (restaurantId: number) => Promise<MenuItem[]>;
   getRestaurantStatus: (restaurantId: number) => { isOpen: boolean; message?: string };
+  getCachedCategoryMenu: (restaurantId: number, category: string) => MenuItem[] | null;
 }
 
 const RestaurantContext = createContext<RestaurantContextType | undefined>(undefined);
@@ -109,71 +110,176 @@ export const RestaurantProvider: React.FC<RestaurantProviderProps> = ({ children
   const fetchMenu = async (restaurantId: number): Promise<MenuItem[]> => {
     const startTime = Date.now();
 
+    const CACHE_KEY = `menu_cache_${restaurantId}`;
+    const CACHE_BYCAT_KEY = `menu_cache_bycat_${restaurantId}`;
+    const VERSION_KEY = `menu_version_${restaurantId}`;
+
+    const normalizeCategory = (c: string): string => {
+      const key = (c || '').trim().toLowerCase();
+      if (key.startsWith('roll')) return 'Roll';
+      if (key.startsWith('burger')) return 'Burger';
+      if (key.startsWith('sand')) return 'Sandwich';
+      if (key.startsWith('ome')) return 'Omelette';
+      if (key.startsWith('mag') || key.startsWith('maggi')) return 'Maggie';
+      if (key.startsWith('mock')) return 'Mocktail';
+      if (key.startsWith('fri')) return 'Fries';
+      if (key.startsWith('drink')) return 'Drinks';
+      return c;
+    };
+
+    const mapApiToMenu = (data: any): MenuItem[] => {
+      const items: MenuItem[] = (data.menu || []).map((item: any) => ({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        description: item.description,
+        imageUrl: item.imageUrl,
+        veg: item.veg,
+        category: item.category,
+        availability: item.availability
+      }));
+      items.sort((a: any, b: any) => {
+        const avA = a.availability !== false;
+        const avB = b.availability !== false;
+        return Number(avB) - Number(avA);
+      });
+      return items;
+    };
+
+    const setOpenStatus = (isOpen: boolean, message?: string) => {
+      setRestaurantStatus(prev => ({
+        ...prev,
+        [restaurantId]: { isOpen, message }
+      }));
+      console.log(`[MENU] Status for resto ${restaurantId}:`, { isOpen, message });
+    };
+
+    // 1) Serve cached menu immediately if available
     try {
-      console.log(`Fetching fresh menu for restaurant ${restaurantId}...`);
+      const cachedRaw = localStorage.getItem(CACHE_KEY);
+      if (cachedRaw) {
+        const cached: MenuItem[] = JSON.parse(cachedRaw);
+        // Ensure by-category cache exists
+        try {
+          const byCatRaw = localStorage.getItem(CACHE_BYCAT_KEY);
+          if (!byCatRaw) {
+            const byCat: Record<string, MenuItem[]> = {};
+            cached.forEach((it) => {
+              const cat = normalizeCategory(it.category);
+              (byCat[cat] ||= []).push(it);
+            });
+            localStorage.setItem(CACHE_BYCAT_KEY, JSON.stringify(byCat));
+          }
+        } catch {}
+        console.log(`[MENU] Using cached menu for resto ${restaurantId} with`, cached.length, 'items');
+        // Kick off a background version check and potential refresh
+        (async () => {
+          try {
+            console.log(`[MENU] Checking menu version for resto ${restaurantId}...`);
+            const vResp = await axios.get(`https://cafe-chain.onrender.com/admin/resto/${restaurantId}/getMenuVersion`, { withCredentials: true });
+            const latest = vResp?.data?.menuVersion != null ? String(vResp.data.menuVersion) : null;
+            const storedVersion = localStorage.getItem(VERSION_KEY);
+            console.log(`[MENU] Version result for resto ${restaurantId}:`, { latest, storedVersion });
+            if (!storedVersion || (latest && latest !== storedVersion)) {
+              console.log(`[MENU] Version changed for resto ${restaurantId}. Refreshing menu...`);
+              const response = await axios.get(`https://cafe-chain.onrender.com/user/resto/${restaurantId}/menu`, { withCredentials: true });
+              const data = response.data;
+              if (data.success && data.message !== "Resto is closed") {
+                const items = mapApiToMenu(data);
+                localStorage.setItem(CACHE_KEY, JSON.stringify(items));
+                // Update by-category cache
+                try {
+                  const byCat: Record<string, MenuItem[]> = {};
+                  items.forEach((it) => {
+                    const cat = normalizeCategory(it.category);
+                    (byCat[cat] ||= []).push(it);
+                  });
+                  localStorage.setItem(CACHE_BYCAT_KEY, JSON.stringify(byCat));
+                } catch {}
+                if (latest) localStorage.setItem(VERSION_KEY, latest);
+                setOpenStatus(true);
+                console.log(`[MENU] Menu refreshed for resto ${restaurantId}. Items:`, items.length);
+              }
+            }
+          } catch (err) {
+            console.warn('[MENU] Menu version check failed', err);
+          }
+        })();
+
+        // assume open if we have a cached menu
+        setOpenStatus(true);
+        return cached;
+      }
+    } catch {}
+
+    // 2) No cache → fetch live and persist
+    try {
+      console.log(`[MENU] No cache. Fetching menu for restaurant ${restaurantId}...`);
       const response = await axios.get(`https://cafe-chain.onrender.com/user/resto/${restaurantId}/menu`, {
         withCredentials: true
       });
-      
       console.log(`[PERF] Menu API call took: ${Date.now() - startTime}ms`);
-      
       const data = response.data;
       if (data.success) {
-        // Check if restaurant is closed
         if (data.message === "Resto is closed") {
-          console.log(`Restaurant ${restaurantId} is CLOSED`);
-          const emptyMenu: MenuItem[] = [];
-          setRestaurantStatus(prev => ({
-            ...prev,
-            [restaurantId]: { isOpen: false, message: "Restaurant is closed" }
-          }));
-          return emptyMenu;
+          setOpenStatus(false, "Restaurant is closed");
+          return [];
         }
-
-        // Restaurant is open, process menu items
-        const menuItems = data.menu.map((item: any) => ({
-          id: item.id,
-          name: item.name,
-          price: item.price,
-          description: item.description,
-          imageUrl: item.imageUrl,
-          veg: item.veg,
-          category: item.category,
-          availability: item.availability
-        }));
-
-        // Sort by availability (available first)
-        menuItems.sort((a: any, b: any) => {
-          const avA = a.availability !== false;
-          const avB = b.availability !== false;
-          return Number(avB) - Number(avA);
-        });
-
-        // Mark restaurant as open
-        setRestaurantStatus(prev => ({
-          ...prev,
-          [restaurantId]: { isOpen: true }
-        }));
-
-        console.log(`[PERF] Menu processed in: ${Date.now() - startTime}ms total for ${menuItems.length} items`);
-        return menuItems;
-      } else {
-        console.log(`Menu fetch failed for restaurant ${restaurantId}:`, data.message);
-        const emptyMenu: MenuItem[] = [];
-        setRestaurantStatus(prev => ({
-          ...prev,
-          [restaurantId]: { isOpen: false, message: data.message || "Menu not available" }
-        }));
-        return emptyMenu;
+        const items = mapApiToMenu(data);
+        try {
+          localStorage.setItem(CACHE_KEY, JSON.stringify(items));
+          // Also store by-category cache
+          const byCat: Record<string, MenuItem[]> = {};
+          items.forEach((it) => {
+            const cat = normalizeCategory(it.category);
+            (byCat[cat] ||= []).push(it);
+          });
+          localStorage.setItem(CACHE_BYCAT_KEY, JSON.stringify(byCat));
+        } catch {}
+        // fetch and store version after data
+        try {
+          console.log(`[MENU] Fetching version after data for resto ${restaurantId}...`);
+          const vResp = await axios.get(`https://cafe-chain.onrender.com/admin/resto/${restaurantId}/getMenuVersion`, { withCredentials: true });
+          const latest = vResp?.data?.menuVersion;
+          if (latest !== undefined && latest !== null) {
+            localStorage.setItem(VERSION_KEY, String(latest));
+            console.log(`[MENU] Stored version ${latest} for resto ${restaurantId}`);
+          }
+        } catch {}
+        setOpenStatus(true);
+        console.log(`[MENU] Menu fetched for resto ${restaurantId}. Items:`, items.length);
+        return items;
       }
+      setOpenStatus(false, data.message || "Menu not available");
+      return [];
     } catch (error) {
-      console.error(`Failed to fetch menu for restaurant ${restaurantId}:`, error);
-      const emptyMenu: MenuItem[] = [];
-      setRestaurantStatus(prev => ({
-        ...prev,
-        [restaurantId]: { isOpen: false, message: "Failed to load menu" }
-      }));
-      return emptyMenu;
+      console.error(`[MENU] Failed to fetch menu for restaurant ${restaurantId}:`, error);
+      setOpenStatus(false, "Failed to load menu");
+      return [];
+    }
+  };
+
+  const getCachedCategoryMenu = (restaurantId: number, category: string): MenuItem[] | null => {
+    try {
+      const byCatRaw = localStorage.getItem(`menu_cache_bycat_${restaurantId}`);
+      if (!byCatRaw) return null;
+      const byCat = JSON.parse(byCatRaw) as Record<string, MenuItem[]>;
+      // Normalize requested category same way
+      const norm = ((): string => {
+        const c = (category || '').trim().toLowerCase();
+        if (c.startsWith('roll')) return 'Roll';
+        if (c.startsWith('burger')) return 'Burger';
+        if (c.startsWith('sand')) return 'Sandwich';
+        if (c.startsWith('ome')) return 'Omelette';
+        if (c.startsWith('mag') || c.startsWith('maggi')) return 'Maggie';
+        if (c.startsWith('mock')) return 'Mocktail';
+        if (c.startsWith('fri')) return 'Fries';
+        if (c.startsWith('drink')) return 'Drinks';
+        return category;
+      })();
+      return byCat[norm] || null;
+    } catch {
+      return null;
     }
   };
 
@@ -187,7 +293,8 @@ export const RestaurantProvider: React.FC<RestaurantProviderProps> = ({ children
     loading,
     fetchRestaurants,
     fetchMenu,
-    getRestaurantStatus
+    getRestaurantStatus,
+    getCachedCategoryMenu
   };
 
   return (

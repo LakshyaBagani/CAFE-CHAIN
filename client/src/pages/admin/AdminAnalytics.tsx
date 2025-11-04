@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import AdminSidebar from '../../components/AdminSidebar';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
   BarChart3, 
   TrendingUp, 
@@ -10,7 +11,11 @@ import {
   Calendar,
   Download,
   Star,
-  ShoppingBag
+  ShoppingBag,
+  Menu,
+  X,
+  ArrowLeft,
+  LogOut
 } from 'lucide-react';
 
 interface AnalyticsData {
@@ -46,6 +51,8 @@ const AdminAnalytics: React.FC = () => {
     monthlyRevenue: []
   });
   const [loading, setLoading] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchAnalyticsData();
@@ -114,9 +121,9 @@ const AdminAnalytics: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen bg-gray-50">
+      <div className="flex min-h-screen bg-gray-50 overflow-x-hidden">
         <AdminSidebar />
-        <div className="flex-1 ml-64">
+          <div className="flex-1 md:ml-64">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header Skeleton */}
         <div className="flex items-center justify-between mb-8">
@@ -250,11 +257,42 @@ const AdminAnalytics: React.FC = () => {
     );
   }
 
-
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-gray-50 overflow-x-hidden">
       <AdminSidebar />
-      <div className="flex-1 ml-64">
+      <div className="flex-1 md:ml-64">
+        {/* Mobile Header */}
+        <div className="md:hidden sticky top-0 z-40 bg-white border-b border-gray-200">
+          <div className="flex items-center justify-between px-4 py-3">
+            <button onClick={() => navigate(-1)} className="flex items-center space-x-2 text-gray-700">
+              <ArrowLeft className="h-5 w-5" />
+              <span className="font-medium">Back</span>
+            </button>
+            <div className="font-bold">Analytics</div>
+            <button onClick={() => setMobileMenuOpen(true)} className="text-gray-700">
+              <Menu className="h-6 w-6" />
+            </button>
+          </div>
+          {mobileMenuOpen && (
+            <>
+              <div className="fixed inset-0 bg-black/30 z-40" onClick={() => setMobileMenuOpen(false)} />
+              <div className="fixed top-0 right-0 h-full w-72 bg-white shadow-xl z-50 p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="font-bold">Menu</div>
+                  <button onClick={() => setMobileMenuOpen(false)}><X className="h-6 w-6" /></button>
+                </div>
+                <nav className="space-y-2">
+                  <Link to="/admin" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 rounded-lg hover:bg-gray-100">Dashboard</Link>
+                  <Link to="/admin/services" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 rounded-lg hover:bg-gray-100">Services</Link>
+                  <Link to="/admin/analytics" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 rounded-lg hover:bg-gray-100">Analytics</Link>
+                  <Link to="/admin/delivered-orders" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 rounded-lg hover:bg-gray-100">Delivered Orders</Link>
+                  <Link to="/admin/users" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 rounded-lg hover:bg-gray-100">Users</Link>
+                  <button onClick={() => { setMobileMenuOpen(false); navigate('/login'); }} className="w-full flex items-center justify-start space-x-2 px-3 py-2 rounded-lg text-red-600 hover:bg-red-50"><LogOut className="h-5 w-5" /><span>Logout</span></button>
+                </nav>
+              </div>
+            </>
+          )}
+        </div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
       <div className="flex items-center justify-between mb-8">

@@ -20,6 +20,8 @@ const Users: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
   const [showAddBalanceModal, setShowAddBalanceModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [amount, setAmount] = useState('');
@@ -51,6 +53,15 @@ const Users: React.FC = () => {
     user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
     user.number.includes(searchQuery)
   );
+
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / pageSize));
+  const startIndex = (currentPage - 1) * pageSize;
+  const currentUsers = filteredUsers.slice(startIndex, startIndex + pageSize);
+
+  useEffect(() => {
+    // Reset to first page when search changes or users update
+    setCurrentPage(1);
+  }, [searchQuery, users]);
 
   const handleAddBalanceClick = (user: User) => {
     setSelectedUser(user);
@@ -102,7 +113,7 @@ const Users: React.FC = () => {
   return (
     <div className="flex min-h-screen bg-gray-50">
       <AdminSidebar />
-      <div className="flex-1 ml-64">
+          <div className="flex-1 md:ml-64">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Header */}
           <div className="mb-8">
@@ -183,7 +194,7 @@ const Users: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredUsers.map((user) => (
+                    {currentUsers.map((user) => (
                       <tr key={user.id} className="hover:bg-gray-50 transition-colors">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
@@ -249,17 +260,32 @@ const Users: React.FC = () => {
                   </tbody>
                 </table>
               </div>
+              {/* Pagination Controls */}
+              <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-gray-50">
+                <div className="text-sm text-gray-600">
+                  Page <span className="font-medium">{currentPage}</span> of <span className="font-medium">{totalPages}</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className={`px-3 py-2 rounded-lg border text-sm ${currentPage === 1 ? 'text-gray-400 border-gray-200 cursor-not-allowed' : 'text-gray-700 border-gray-300 hover:bg-gray-100'}`}
+                  >
+                    Previous
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className={`px-3 py-2 rounded-lg border text-sm ${currentPage === totalPages ? 'text-gray-400 border-gray-200 cursor-not-allowed' : 'text-gray-700 border-gray-300 hover:bg-gray-100'}`}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 
-          {/* Summary */}
-          {!loading && filteredUsers.length > 0 && (
-            <div className="mt-6 bg-amber-50 border border-amber-200 rounded-xl p-4">
-              <p className="text-sm text-amber-800">
-                Showing <strong>{filteredUsers.length}</strong> of <strong>{users.length}</strong> users
-              </p>
-            </div>
-          )}
+          
 
           {/* Add Balance Modal */}
           {showAddBalanceModal && selectedUser && (

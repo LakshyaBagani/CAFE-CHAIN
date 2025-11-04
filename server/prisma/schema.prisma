@@ -106,3 +106,10 @@ model ads {
   menu     menu    @relation(fields: [menuId], references: [id])
   resto    resto   @relation(fields: [restoId], references: [id])
 }
+
+model mealPlan {
+  id Int @id @default(autoincrement())
+  day String
+  time String
+  menu String
+}

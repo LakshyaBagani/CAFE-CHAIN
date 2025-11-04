@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { 
   ArrowLeft,
   User,
@@ -12,6 +12,7 @@ import {
   Truck,
   CheckCircle
 } from 'lucide-react';
+import { Sliders } from 'lucide-react';
 import axios from 'axios';
 
 const Profile: React.FC = () => {
@@ -286,7 +287,7 @@ const Profile: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50">
       {/* Back Button */}
       <div className="bg-white/80 backdrop-blur-sm border-b border-orange-200 sticky top-0 z-30">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <button
             onClick={() => navigate('/')}
             className="flex items-center space-x-2 text-orange-600 hover:text-orange-700 transition-colors"
@@ -294,6 +295,13 @@ const Profile: React.FC = () => {
             <ArrowLeft className="h-5 w-5" />
             <span className="font-medium">Back to Home</span>
           </button>
+          <Link
+            to="/choose"
+            className="inline-flex items-center space-x-2 px-3 py-2 rounded-lg text-amber-700 hover:text-amber-800 hover:bg-amber-50 transition-colors text-sm font-medium"
+          >
+            <Sliders className="h-4 w-4" />
+            <span>Preferences</span>
+          </Link>
         </div>
       </div>
 

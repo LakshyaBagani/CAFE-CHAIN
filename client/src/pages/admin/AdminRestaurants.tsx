@@ -153,9 +153,19 @@ const AdminRestaurants: React.FC = () => {
   // Show skeleton grid while loading (no blank screen)
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-gray-50 overflow-x-hidden">
       <AdminSidebar />
-      <div className="flex-1 ml-64">
+          <div className="flex-1 md:ml-64">
+        {/* Mobile Header */}
+        <div className="md:hidden sticky top-0 z-40 bg-white border-b border-gray-200">
+          <div className="flex items-center justify-between px-4 py-3">
+            <button onClick={() => navigate(-1)} className="flex items-center space-x-2 text-gray-700">
+              <span className="font-medium">Back</span>
+            </button>
+            <div className="font-bold">Restaurants</div>
+            <div className="w-10" />
+          </div>
+        </div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/** Format today's date as dd/mm/yyyy for display */}
       {(() => { return null; })()}

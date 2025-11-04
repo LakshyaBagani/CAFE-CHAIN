@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 // Link removed - not used
 import AdminSidebar from '../../components/AdminSidebar';
-import { Calendar, IndianRupee, PackageCheck } from 'lucide-react';
+import { Calendar, IndianRupee, PackageCheck, ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface DeliveredOrderItem {
   id: number;
@@ -104,10 +105,23 @@ const AdminDeliveredOrders: React.FC = () => {
 
   const totalRevenue = useMemo(() => orders.reduce((s, o) => s + o.totalPrice, 0), [orders]);
 
+  const navigate = useNavigate();
+
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-gray-50 overflow-x-hidden">
       <AdminSidebar />
-      <div className="flex-1 ml-64">
+          <div className="flex-1 md:ml-64">
+        {/* Mobile Header */}
+        <div className="md:hidden sticky top-0 z-40 bg-white border-b border-gray-200">
+          <div className="flex items-center justify-between px-4 py-3">
+            <button onClick={() => navigate(-1)} className="flex items-center space-x-2 text-gray-700">
+              <ArrowLeft className="h-5 w-5" />
+              <span className="font-medium">Back</span>
+            </button>
+            <div className="font-bold">Delivered Orders</div>
+            <div className="w-10" />
+          </div>
+        </div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
       <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl p-6 mb-8 border border-amber-200">

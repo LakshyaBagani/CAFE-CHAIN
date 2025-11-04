@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import AdminSidebar from '../../components/AdminSidebar';
 import { 
   Coffee, 
@@ -9,7 +9,10 @@ import {
   Utensils,
   Eye,
   BarChart3,
-  ShoppingBag
+  ShoppingBag,
+  Menu,
+  X,
+  LogOut
 } from 'lucide-react';
 import { CalendarDays } from 'lucide-react';
 
@@ -34,6 +37,8 @@ const AdminDashboard: React.FC = () => {
     todayRevenue: 0
   });
   const [isFetching, setIsFetching] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchDashboardData();
@@ -90,7 +95,36 @@ const AdminDashboard: React.FC = () => {
   return (
     <div className="flex min-h-screen bg-gray-50">
       <AdminSidebar />
-      <div className="flex-1 ml-64">
+          <div className="flex-1 md:ml-64">
+        {/* Mobile Header */}
+        <div className="md:hidden sticky top-0 z-40 bg-white border-b border-gray-200">
+          <div className="flex items-center justify-between px-4 py-3">
+            <div className="w-10" />
+            <div className="font-bold">Admin Dashboard</div>
+            <button onClick={() => setMobileMenuOpen(true)} className="text-gray-700">
+              <Menu className="h-6 w-6" />
+            </button>
+          </div>
+          {mobileMenuOpen && (
+            <>
+              <div className="fixed inset-0 bg-black/30 z-40" onClick={() => setMobileMenuOpen(false)} />
+              <div className="fixed top-0 right-0 h-full w-72 bg-white shadow-xl z-50 p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="font-bold">Menu</div>
+                  <button onClick={() => setMobileMenuOpen(false)}><X className="h-6 w-6" /></button>
+                </div>
+                <nav className="space-y-2">
+                  <Link to="/admin" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 rounded-lg hover:bg-gray-100">Dashboard</Link>
+                  <Link to="/admin/services" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 rounded-lg hover:bg-gray-100">Services</Link>
+                  <Link to="/admin/analytics" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 rounded-lg hover:bg-gray-100">Analytics</Link>
+                  <Link to="/admin/delivered-orders" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 rounded-lg hover:bg-gray-100">Delivered Orders</Link>
+                  <Link to="/admin/users" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 rounded-lg hover:bg-gray-100">Users</Link>
+                  <button onClick={() => { setMobileMenuOpen(false); navigate('/login'); }} className="w-full flex items-center justify-start space-x-2 px-3 py-2 rounded-lg text-red-600 hover:bg-red-50"><LogOut className="h-5 w-5" /><span>Logout</span></button>
+                </nav>
+              </div>
+            </>
+          )}
+        </div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
       <div className="mb-8">
@@ -104,7 +138,7 @@ const AdminDashboard: React.FC = () => {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className={`bg-white rounded-xl shadow-sm border border-gray-200 p-6 ${isFetching ? 'animate-pulse' : ''}`}>
+        <Link to="/admin/restaurants" className={`block bg-white rounded-xl shadow-sm border border-gray-200 p-6 ${isFetching ? 'animate-pulse' : 'hover:shadow-md transition-shadow'}`}>
           <div className="flex items-center">
             <div className="p-3 bg-blue-100 rounded-lg">
               <Coffee className="h-6 w-6 text-blue-600" />
@@ -118,7 +152,7 @@ const AdminDashboard: React.FC = () => {
               )}
             </div>
           </div>
-        </div>
+        </Link>
 
         <div className={`bg-white rounded-xl shadow-sm border border-gray-200 p-6 ${isFetching ? 'animate-pulse' : ''}`}>
           <div className="flex items-center">

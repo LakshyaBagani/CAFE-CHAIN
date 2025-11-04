@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import RestaurantService, { type Restaurant } from '../../services/restaurantService';
 import { formatDate } from '../../utils/dateUtils';
@@ -11,7 +11,8 @@ import {
   Coffee,
   Utensils,
   X,
-  Upload
+  Upload,
+  ArrowLeft
 } from 'lucide-react';
 
 interface Order {
@@ -46,6 +47,7 @@ interface Order {
 
 const RestaurantOrders: React.FC = () => {
   const { restaurantId } = useParams<{ restaurantId: string }>();
+  const navigate = useNavigate();
   const restaurantService = RestaurantService.getInstance();
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -228,8 +230,8 @@ const RestaurantOrders: React.FC = () => {
               <span>{new Date(order.createdAt).toLocaleTimeString()}</span>
             </div>
             <div className="mt-1">
-              <p className="font-semibold text-gray-900 text-sm">{order.user.name}</p>
-              <p className="text-xs text-gray-600">{order.user.number || '—'}</p>
+              <p className="font-semibold text-gray-900 text-sm break-words whitespace-normal">{order.user.name}</p>
+              <p className="text-xs text-gray-600 break-words whitespace-normal">{order.user.number || '—'}</p>
             </div>
           </div>
           <div className="text-right ml-4">
@@ -251,7 +253,7 @@ const RestaurantOrders: React.FC = () => {
                   }}
                 />
                 <div className="flex-1">
-                  <p className="font-semibold text-gray-900">{item.menu.name}</p>
+                  <p className="font-semibold text-gray-900 break-words whitespace-normal">{item.menu.name}</p>
                   <p className="text-sm text-gray-600">Qty: {item.quantity} × ₹{item.menu.price}</p>
                 </div>
                 <span className="font-bold text-gray-900">₹{item.menu.price * item.quantity}</span>
@@ -326,30 +328,48 @@ const RestaurantOrders: React.FC = () => {
   // Render the full page immediately; only order lists show skeletons when loading
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 overflow-x-hidden">
+      <div className="md:hidden sticky top-0 z-40 bg-white border-b border-gray-200">
+        <div className="flex items-center justify-between px-4 py-3">
+          <button onClick={() => navigate(-1)} className="flex items-center space-x-2 text-gray-700">
+            <ArrowLeft className="h-5 w-5" />
+            <span className="font-medium">Back</span>
+          </button>
+          <div className="font-bold">Restaurant Orders</div>
+          <div className="w-10" />
+        </div>
+      </div>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Enhanced Header */}
-        <div className="bg-white rounded-2xl shadow-xl p-8 mb-8 border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-6">
+        <div className="bg-white rounded-2xl shadow-xl p-6 md:p-8 mb-6 md:mb-8 border border-gray-100">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-start sm:items-center gap-4 sm:gap-6">
+              <Link
+                to="/admin/restaurants"
+                className="inline-flex items-center space-x-2 text-gray-600 hover:text-gray-900 px-3 py-2 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors w-max"
+                aria-label="Back to Restaurants"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span>Back</span>
+              </Link>
               <div>
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent mb-2">
+                <h1 className="text-2xl md:text-4xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent mb-1 md:mb-2">
                   {restaurant?.name || 'Restaurant'} Orders
                 </h1>
-                <p className="text-gray-600 text-lg">Manage and track all orders for this restaurant</p>
+                <p className="text-gray-600 text-sm md:text-lg">Manage and track all orders for this restaurant</p>
               </div>
             </div>
-            <div className="flex items-center space-x-3">
+            <div className="flex flex-col xs:flex-row items-stretch sm:items-center gap-2 sm:gap-3 sm:justify-end w-full sm:w-auto">
               <Link
                 to={`/admin/restaurants/${restaurantId}/menu`}
-                className="flex items-center space-x-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-semibold py-3 px-6 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl"
+                className="flex items-center justify-center gap-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-semibold py-2.5 px-4 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg w-full sm:w-auto"
               >
                 <Utensils className="h-4 w-4" />
                 <span>Menu</span>
               </Link>
               <button
                 onClick={() => setShowAddMenuModal(true)}
-                className="flex items-center space-x-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl"
+                className="flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold py-2.5 px-4 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg w-full sm:w-auto"
               >
                 <Utensils className="h-4 w-4" />
                 <span>Add Menu</span>
@@ -357,9 +377,9 @@ const RestaurantOrders: React.FC = () => {
               <button
                 onClick={() => fetchRestaurantAndOrders()}
                 disabled={loading}
-                className="flex items-center space-x-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 disabled:from-blue-400 disabled:to-blue-500 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 transform hover:scale-105 disabled:transform-none shadow-lg hover:shadow-xl"
+                className="flex items-center justify-center gap-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 disabled:from-blue-400 disabled:to-blue-500 disabled:cursor-not-allowed text-white font-semibold py-2.5 px-4 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg w-full sm:w-auto"
               >
-                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`${loading ? 'animate-spin' : ''} h-4 w-4`} />
                 <span>{loading ? 'Refreshing...' : 'Refresh'}</span>
               </button>
             </div>
@@ -557,13 +577,7 @@ const RestaurantOrders: React.FC = () => {
         </div>
       </div>
 
-      {filteredOrders.length === 0 && (
-        <div className="text-center py-12">
-          <Coffee className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No orders found</h3>
-          <p className="text-gray-500">Try adjusting your search or check back later</p>
-        </div>
-      )}
+      {/* Removed global empty state - show per-column empty messages only */}
 
       {/* Add Menu Modal */}
       {showAddMenuModal && (

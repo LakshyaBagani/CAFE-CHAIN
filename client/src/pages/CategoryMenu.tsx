@@ -22,7 +22,7 @@ const CategoryMenu: React.FC = () => {
   const { category, userId } = useParams<{ category: string; userId: string }>();
   const { } = useLocation();
   const { addItem, removeItem, updateQuantity, items: cartItems, setCurrentRestaurant } = useCart();
-  const { fetchMenu, getRestaurantStatus } = useRestaurant();
+  const { getRestaurantStatus, getCachedCategoryMenu } = useRestaurant();
   const navigate = useNavigate();
   
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -46,28 +46,17 @@ const CategoryMenu: React.FC = () => {
     // Set current restaurant for cart management
     setCurrentRestaurant(parseInt(userId));
 
-    const fetchMenuItems = async () => {
-      setLoading(true);
-      try {
-        // Use centralized menu fetching
-        const items = await fetchMenu(parseInt(userId));
-        
-        // Filter by category
-        let filteredItems = items;
-        if (category && category !== 'All') {
-          filteredItems = items.filter((item: MenuItem) => item.category === category);
-        }
-        
-        setMenuItems(filteredItems);
-      } catch (error) {
-        console.error('Error fetching menu items:', error);
-        setMenuItems([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchMenuItems();
+    // Only read from cached per-category menu prepared at Home/RestaurantContext
+    setLoading(true);
+    try {
+      const items = category ? getCachedCategoryMenu(parseInt(userId), category) : [];
+      setMenuItems(items || []);
+    } catch (error) {
+      console.error('Error reading cached category menu:', error);
+      setMenuItems([]);
+    } finally {
+      setLoading(false);
+    }
   }, [userId, category, navigate]);
 
   const handleAddToCart = (item: MenuItem) => {
