@@ -71,7 +71,7 @@ export const Login = async (req: Request, res: Response) => {
     }
 
     await generateToken(user.id, res);
-    console.log("Login successful, JWT cookie set for user:", user.id);
+    
 
     return res.status(200).send({
       success: true,
@@ -84,10 +84,10 @@ export const Login = async (req: Request, res: Response) => {
 
 export const Logout = async (req:Request,res:Response) => {
     try {
-        console.log("Logout endpoint hit - clearing cookies");
+        
         res.clearCookie("jwt")
         res.clearCookie("adminSession")
-        console.log("Cookies cleared successfully");
+        
         return res.status(200).send({success:true , message:"User log out successfully"})
     } catch (error) {
         console.error("Logout error:", error);
@@ -99,7 +99,7 @@ export const sendOTP = async (req: Request, res: Response) => {
   try {
     const { email } = req.body;
     const startTs = Date.now();
-    console.log("[OTP] Request received", { email });
+    
 
     if (!email) {
       return res
@@ -141,11 +141,7 @@ export const sendOTP = async (req: Request, res: Response) => {
 
 
     const mailOptions = mailOption(email, verificationCode);
-    console.log("[Email] Preparing to send OTP (Brevo):", {
-      to: mailOptions.to,
-      subject: mailOptions.subject,
-      htmlLength: mailOptions.html?.length
-    });
+
     const sendSmtpEmail: any = {
       sender: { email: process.env.SENDER_EMAIL, name: "Sojo's Cafe" },
       to: [{ email: mailOptions.to }],
@@ -157,7 +153,6 @@ export const sendOTP = async (req: Request, res: Response) => {
       console.time("[OTP] brevo.sendTransacEmail");
       const response = await brevoClient.sendTransacEmail(sendSmtpEmail);
       console.timeEnd("[OTP] brevo.sendTransacEmail");
-      console.log("[Email] OTP email sent (Brevo)", { to: mailOptions.to, messageId: (response as any)?.messageId });
     } catch (e) {
       const err = e as any;
       console.error("[Email] Brevo send failed:", {
@@ -169,7 +164,7 @@ export const sendOTP = async (req: Request, res: Response) => {
       return res.status(500).send({ success: false, message: "Failed to send OTP. Please try again." });
     }
     
-    console.log("[OTP] Completed in", Date.now() - startTs, "ms");
+    
     return res
       .status(200)
       .send({ success: true, message: "OTP sent successfully! Check your email." });

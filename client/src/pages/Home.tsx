@@ -110,20 +110,17 @@ const Home: React.FC = () => {
 
   useEffect(() => {
     if (selectedLocation && !trendingLoading && !fetchingRef.current) {
-      console.log("Selected location changed, fetching fresh menu data...", selectedLocation);
       fetchTrendingMenus();
     }
   }, [selectedLocation?.id]);
 
   const fetchTrendingMenus = async () => {
     if (!selectedLocation || trendingLoading || fetchingRef.current) {
-      console.log("Skipping fetchTrendingMenus - no location, already loading, or already fetching");
       return;
     }
     
     const restoId = selectedLocation.id;
     
-    console.log("Fetching fresh trending menus for location:", selectedLocation.location, "restoId:", restoId);
     fetchingRef.current = true;
     setTrendingLoading(true);
     
@@ -145,6 +142,7 @@ const Home: React.FC = () => {
     <div className="pb-6 bg-gradient-to-br from-gray-50 via-orange-50/30 to-amber-50/20 min-h-screen">
       <div className="max-w-7xl mx-auto">
       <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700&family=Poppins:wght@700;800;900&display=swap');
         @keyframes gentleFloat {
           0%, 100% { transform: translateY(0px) rotate(0deg); }
           50% { transform: translateY(-8px) rotate(2deg); }
@@ -288,6 +286,15 @@ const Home: React.FC = () => {
           overflow: hidden;
           box-shadow: 0 15px 40px rgba(245, 158, 11, 0.3), 0 5px 15px rgba(0, 0, 0, 0.1);
           border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .promo-headline {
+          font-family: 'Poppins', ui-sans-serif, system-ui, -apple-system;
+          letter-spacing: 0.02em;
+        }
+
+        .promo-sub {
+          font-family: 'Nunito', ui-sans-serif, system-ui, -apple-system;
         }
 
         .promo-banner::before {
@@ -435,25 +442,23 @@ const Home: React.FC = () => {
       {/* Promotional Banner */}
       <div className="px-4 pt-4 pb-2">
         <div className="promo-banner rounded-3xl shadow-2xl overflow-hidden">
-          <div className="relative px-6 py-8 text-white">
+          <div className="relative px-6 py-9 sm:py-10 text-white">
             <div className="relative z-10 text-center">
-              <div className="promo-float inline-block mb-3">
-                <div className="w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center backdrop-blur-sm border-2 border-white border-opacity-30">
-                  <Zap className="w-8 h-8 text-yellow-300 drop-shadow-lg" />
-                </div>
-              </div>
-              <h3 className="text-3xl font-extrabold mb-2 drop-shadow-2xl tracking-tight">Flash Sale!</h3>
-              <p className="text-lg mb-4 font-semibold opacity-95 drop-shadow-lg">Get 20% off on your first order</p>
-              <div className="flex items-center justify-center space-x-2 mb-4">
-                <div className="bg-white bg-opacity-25 backdrop-blur-md px-4 py-2 rounded-xl border border-white border-opacity-30 shadow-lg">
-                  <span className="text-2xl font-bold drop-shadow-lg">02:45:32</span>
-                </div>
-              </div>
+              
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 border border-white/30 text-xs font-bold tracking-wider mb-3">SOJO SPECIAL</div>
+              <h3 className="promo-headline text-3xl sm:text-4xl font-extrabold mb-2 drop-shadow-2xl tracking-tight bg-gradient-to-r from-white via-yellow-100 to-white bg-clip-text text-transparent">
+                Daily Lucky Draw
+              </h3>
+              <p className="promo-sub text-base sm:text-lg mb-6 font-semibold opacity-95 drop-shadow-lg">
+                Order above ₹250 and one lucky customer wins ₹50 wallet cash — every day.
+              </p>
               <button className="bg-white text-orange-700 px-8 py-3 rounded-full text-base font-bold hover:bg-yellow-300 hover:text-orange-800 transition-all duration-300 shadow-2xl hover:shadow-yellow-300/50 transform hover:scale-110 relative overflow-hidden group">
                 <span className="relative z-10">Claim Offer Now</span>
                 <div className="absolute inset-0 bg-gradient-to-r from-yellow-300 to-orange-300 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               </button>
             </div>
+            <div className="absolute -top-6 -left-6 w-28 h-28 bg-white/10 rounded-3xl blur-xl" />
+            <div className="absolute -bottom-8 -right-8 w-40 h-40 bg-yellow-200/20 rounded-full blur-3xl" />
           </div>
         </div>
       </div>

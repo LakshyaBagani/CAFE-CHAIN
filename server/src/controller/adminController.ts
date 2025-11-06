@@ -837,7 +837,7 @@ export const changeMenuStatus = async (req: Request, res: Response) => {
 export const getMenuVersion = async (req: Request, res: Response) => {
   try {
     const { restoId } = req.params;
-    console.log("Resto ID",restoId);
+    
     if (!restoId) {
       return res
         .status(400)
@@ -846,7 +846,7 @@ export const getMenuVersion = async (req: Request, res: Response) => {
     const resto = await prisma.resto.findUnique({
       where: { id: parseInt(restoId) },
     });
-    console.log("Resto",resto);
+    
     if (!resto) {
       return res
         .status(404)
@@ -866,7 +866,7 @@ export const resoStatus = async (req: Request, res: Response) => {
   try {
     const { restoId } = req.params;
     const { status } = req.body;
-    console.log("Changing restaurant status - ID:", restoId, "Status:", status);
+    
 
     if (status === undefined || status === null || !restoId) {
       return res
@@ -877,7 +877,7 @@ export const resoStatus = async (req: Request, res: Response) => {
       where: { id: parseInt(restoId) },
       data: { open: status, menuVersion: { increment: 1 } },
     });
-    console.log("Restaurant status updated:", resto);
+    
     return res.status(200).send({
       success: true,
       message: "Resto status changed successfully",

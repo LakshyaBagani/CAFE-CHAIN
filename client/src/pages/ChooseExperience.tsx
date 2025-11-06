@@ -10,7 +10,7 @@ const ChooseExperience: React.FC = () => {
     if (choice === 'meal') {
       navigate('/meal-plan', { replace: true });
     } else {
-      navigate('/', { replace: true });
+      navigate('/cafe/1', { replace: true });
     }
   };
 

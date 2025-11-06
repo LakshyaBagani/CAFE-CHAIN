@@ -74,11 +74,8 @@ export const RestaurantProvider: React.FC<RestaurantProviderProps> = ({ children
     const startTime = Date.now();
     
     try {
-      console.log('Fetching restaurants data...');
       const response = await axios.get('https://cafe-chain.onrender.com/user/restaurants');
       const data = response.data;
-      
-      console.log(`[PERF] Restaurants API call took: ${Date.now() - startTime}ms`);
       
       if (data.success && data.restaurants) {
         const restaurantData = data.restaurants.map((resto: any) => ({
@@ -93,13 +90,11 @@ export const RestaurantProvider: React.FC<RestaurantProviderProps> = ({ children
           localStorage.setItem('restaurants_cache', JSON.stringify(restaurantData));
           localStorage.setItem('restaurants_cache_time', Date.now().toString());
         } catch (e) {
-          console.error('Failed to cache restaurants:', e);
+          // ignore cache errors
         }
-        console.log(`[PERF] Restaurants processed in: ${Date.now() - startTime}ms total`);
       }
     } catch (error) {
-      console.error('Failed to fetch restaurants:', error);
-      console.log(`[PERF] Restaurants fetch failed after: ${Date.now() - startTime}ms`);
+      // ignore fetch error logs in UI
     } finally {
       setLoading(false);
     }
@@ -129,20 +124,20 @@ export const RestaurantProvider: React.FC<RestaurantProviderProps> = ({ children
 
     const mapApiToMenu = (data: any): MenuItem[] => {
       const items: MenuItem[] = (data.menu || []).map((item: any) => ({
-        id: item.id,
-        name: item.name,
-        price: item.price,
-        description: item.description,
-        imageUrl: item.imageUrl,
-        veg: item.veg,
-        category: item.category,
-        availability: item.availability
-      }));
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          description: item.description,
+          imageUrl: item.imageUrl,
+          veg: item.veg,
+          category: item.category,
+          availability: item.availability
+        }));
       items.sort((a: any, b: any) => {
-        const avA = a.availability !== false;
-        const avB = b.availability !== false;
-        return Number(avB) - Number(avA);
-      });
+          const avA = a.availability !== false;
+          const avB = b.availability !== false;
+          return Number(avB) - Number(avA);
+        });
       return items;
     };
 
@@ -151,7 +146,6 @@ export const RestaurantProvider: React.FC<RestaurantProviderProps> = ({ children
         ...prev,
         [restaurantId]: { isOpen, message }
       }));
-      console.log(`[MENU] Status for resto ${restaurantId}:`, { isOpen, message });
     };
 
     // 1) Serve cached menu immediately if available
@@ -171,17 +165,13 @@ export const RestaurantProvider: React.FC<RestaurantProviderProps> = ({ children
             localStorage.setItem(CACHE_BYCAT_KEY, JSON.stringify(byCat));
           }
         } catch {}
-        console.log(`[MENU] Using cached menu for resto ${restaurantId} with`, cached.length, 'items');
         // Kick off a background version check and potential refresh
         (async () => {
           try {
-            console.log(`[MENU] Checking menu version for resto ${restaurantId}...`);
             const vResp = await axios.get(`https://cafe-chain.onrender.com/admin/resto/${restaurantId}/getMenuVersion`, { withCredentials: true });
             const latest = vResp?.data?.menuVersion != null ? String(vResp.data.menuVersion) : null;
             const storedVersion = localStorage.getItem(VERSION_KEY);
-            console.log(`[MENU] Version result for resto ${restaurantId}:`, { latest, storedVersion });
             if (!storedVersion || (latest && latest !== storedVersion)) {
-              console.log(`[MENU] Version changed for resto ${restaurantId}. Refreshing menu...`);
               const response = await axios.get(`https://cafe-chain.onrender.com/user/resto/${restaurantId}/menu`, { withCredentials: true });
               const data = response.data;
               if (data.success && data.message !== "Resto is closed") {
@@ -198,11 +188,10 @@ export const RestaurantProvider: React.FC<RestaurantProviderProps> = ({ children
                 } catch {}
                 if (latest) localStorage.setItem(VERSION_KEY, latest);
                 setOpenStatus(true);
-                console.log(`[MENU] Menu refreshed for resto ${restaurantId}. Items:`, items.length);
               }
             }
           } catch (err) {
-            console.warn('[MENU] Menu version check failed', err);
+            // ignore background version errors
           }
         })();
 
@@ -214,11 +203,9 @@ export const RestaurantProvider: React.FC<RestaurantProviderProps> = ({ children
 
     // 2) No cache → fetch live and persist
     try {
-      console.log(`[MENU] No cache. Fetching menu for restaurant ${restaurantId}...`);
       const response = await axios.get(`https://cafe-chain.onrender.com/user/resto/${restaurantId}/menu`, {
         withCredentials: true
       });
-      console.log(`[PERF] Menu API call took: ${Date.now() - startTime}ms`);
       const data = response.data;
       if (data.success) {
         if (data.message === "Resto is closed") {
@@ -238,22 +225,18 @@ export const RestaurantProvider: React.FC<RestaurantProviderProps> = ({ children
         } catch {}
         // fetch and store version after data
         try {
-          console.log(`[MENU] Fetching version after data for resto ${restaurantId}...`);
           const vResp = await axios.get(`https://cafe-chain.onrender.com/admin/resto/${restaurantId}/getMenuVersion`, { withCredentials: true });
           const latest = vResp?.data?.menuVersion;
           if (latest !== undefined && latest !== null) {
             localStorage.setItem(VERSION_KEY, String(latest));
-            console.log(`[MENU] Stored version ${latest} for resto ${restaurantId}`);
           }
         } catch {}
         setOpenStatus(true);
-        console.log(`[MENU] Menu fetched for resto ${restaurantId}. Items:`, items.length);
         return items;
       }
       setOpenStatus(false, data.message || "Menu not available");
       return [];
     } catch (error) {
-      console.error(`[MENU] Failed to fetch menu for restaurant ${restaurantId}:`, error);
       setOpenStatus(false, "Failed to load menu");
       return [];
     }

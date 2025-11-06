@@ -134,6 +134,14 @@ const MealPlan: React.FC = () => {
                   Eat well, every day
                 </span>
               </div>
+              {/* Desktop Preferences */}
+              <button
+                onClick={handleNavigateToPreferences}
+                className="hidden md:flex items-center space-x-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <Sparkles className="h-4 w-4 text-orange-600" />
+                <span className="font-medium">Preferences</span>
+              </button>
               
               {/* Desktop Logout */}
               <button

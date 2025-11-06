@@ -64,7 +64,6 @@ const Restaurant: React.FC = () => {
       
       // Wait for restaurants to be loaded (they should be auto-loaded by context)
       if (restaurants.length === 0) {
-        console.log("Waiting for restaurants to be loaded...");
         return; // Will re-trigger useEffect when restaurants are loaded
       }
       
@@ -83,9 +82,7 @@ const Restaurant: React.FC = () => {
       }
 
       // Use centralized menu fetching
-      console.log("Fetching fresh menu data...");
       const menuItems = await fetchMenu(parseInt(id!));
-      console.log("Menu items received:", menuItems.length, "items");
       setMenuItems(menuItems);
       
     } catch (error) {

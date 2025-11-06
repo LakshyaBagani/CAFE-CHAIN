@@ -29,7 +29,9 @@ const Login: React.FC = () => {
 
     try {
       await login(formData.email, formData.password);
-      navigate('/');
+      // Clear any previously saved preference so user chooses each login
+      try { localStorage.removeItem('preferred_entry'); } catch {}
+      navigate('/choose');
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || err.message || 'Login failed';
       setError(errorMessage);
