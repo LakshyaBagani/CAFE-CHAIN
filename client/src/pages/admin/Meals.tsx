@@ -130,7 +130,7 @@ const Meals: React.FC = () => {
     const fetchPlans = async () => {
       try {
         setLoadingPlans(true);
-        const resp = await axios.get('http://localhost:3000/admin/meals', { withCredentials: true });
+        const resp = await axios.get('https://cafe-chain.onrender.com/admin/meals', { withCredentials: true });
         if (resp.data?.success && Array.isArray(resp.data.plans)) {
           const byKey = new Map<string, string>();
           for (const p of resp.data.plans as Array<{ day: Weekday; time: MealType; menu: string }>) {
