@@ -32,16 +32,33 @@ app.use(express_1.default.json());
 app.use('/auth', authRoute_1.default);
 app.use('/admin', adminRoute_1.default);
 app.use('/user', userRoute_1.default);
-app.post('/pixeltrace', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+app.post('/pixeltrace/register', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { name, email, number, college } = req.body;
+        if (!name || !email || !number || !college) {
+            return res.status(400).send({
+                success: false,
+                message: "Missing required fields: name, email, number, and college are required"
+            });
+        }
+        const existingPixelTrace = yield db_1.default.pixelTrace.findFirst({ where: { email } });
+        if (existingPixelTrace) {
+            return res.status(400).send({
+                success: false,
+                message: "Email already registered"
+            });
+        }
         const pixelTrace = yield db_1.default.pixelTrace.create({
             data: { name, email, number, college }
         });
         return res.status(200).send({ success: true, message: "Registered successfully", pixelTrace });
     }
     catch (error) {
-        return res.status(500).send({ success: false, message: error });
+        console.error('Error creating pixelTrace:', error);
+        return res.status(500).send({
+            success: false,
+            message: (error === null || error === void 0 ? void 0 : error.message) || "Internal server error"
+        });
     }
 }));
 app.listen(3000, () => {

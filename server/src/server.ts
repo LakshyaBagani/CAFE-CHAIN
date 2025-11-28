@@ -25,15 +25,36 @@ app.use('/auth', authRoute);
 app.use('/admin', adminRoute);
 app.use('/user', userRoute);
 
-app.post('/pixeltrace', async (req, res) => {
+app.post('/pixeltrace/register', async (req, res) => {
   try {
+    
     const { name, email, number, college } = req.body;
+    
+    if (!name || !email || !number || !college) {
+      return res.status(400).send({ 
+        success: false, 
+        message: "Missing required fields: name, email, number, and college are required" 
+      });
+    }
+
+    const existingPixelTrace = await prisma.pixelTrace.findFirst({ where: { email } });
+    if (existingPixelTrace) {
+      return res.status(400).send({ 
+        success: false, 
+        message: "Email already registered" 
+      });
+    }
+    
     const pixelTrace = await prisma.pixelTrace.create({
       data: { name, email, number, college }
     });
     return res.status(200).send({ success: true, message: "Registered successfully", pixelTrace });
-  } catch (error) {
-    return res.status(500).send({ success: false, message: error });
+  } catch (error: any) {
+    console.error('Error creating pixelTrace:', error);
+    return res.status(500).send({ 
+      success: false, 
+      message: error?.message || "Internal server error" 
+    });
   }
 });
 
