@@ -34,7 +34,7 @@ function mailOption(email, verificationCode) {
         <div style="background: #f9fafb; padding: 15px; text-align: center; font-size: 12px; color: #888;">
           If you didn’t request this, you can safely ignore this email.  
           <br><br>
-          © ${new Date().getFullYear()} One Prompt. All rights reserved.
+          © ${new Date().getFullYear()} Sojo Cafe. All rights reserved.
         </div>
       </div>
     </div>

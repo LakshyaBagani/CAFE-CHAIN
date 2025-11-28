@@ -3,9 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
 }
 
 model user {
@@ -112,4 +110,13 @@ model mealPlan {
   day String
   time String
   menu String
+}
+
+model PixelTrace {
+  id Int @id @default(autoincrement())
+  name String
+  email String
+  number String
+  college String
+  createdAt DateTime @default(now())
 }

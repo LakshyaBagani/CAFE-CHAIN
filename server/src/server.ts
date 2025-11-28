@@ -5,6 +5,7 @@ import authRoute from "./routes/authRoute";
 import adminRoute from "./routes/adminRoute";
 import userRoute from "./routes/userRoute";
 import cors from "cors";
+import prisma from "./config/db";
 
 dotenv.config();
 
@@ -24,6 +25,18 @@ app.use('/auth', authRoute);
 app.use('/admin', adminRoute);
 app.use('/user', userRoute);
 
+app.post('/pixeltrace', async (req, res) => {
+  try {
+    const { name, email, number, college } = req.body;
+    const pixelTrace = await prisma.pixelTrace.create({
+      data: { name, email, number, college }
+    });
+    return res.status(200).send({ success: true, message: "Registered successfully", pixelTrace });
+  } catch (error) {
+    return res.status(500).send({ success: false, message: error });
+  }
+});
+
 app.listen(3000, () => {
-  // server started
+  console.log("Server is running on port 3000");
 });
