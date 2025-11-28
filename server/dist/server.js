@@ -23,5 +23,5 @@ app.use('/auth', authRoute_1.default);
 app.use('/admin', adminRoute_1.default);
 app.use('/user', userRoute_1.default);
 app.listen(3000, () => {
-    console.log("Listening on the port 3000");
+    // server started
 });

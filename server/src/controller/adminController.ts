@@ -1202,34 +1202,3 @@ export const getMealPlans = async (_req: Request, res: Response) => {
   }
 };
 
-export const bulkSetMealPlans = async (req: Request, res: Response) => {
-  try {
-    const { plans } = req.body as { plans?: Array<{ day: string; time: string; menu: string }> };
-    if (!Array.isArray(plans) || plans.length === 0) {
-      return res.status(400).send({ success: false, message: 'plans array is required' });
-    }
-
-    // Validate entries
-    for (const p of plans) {
-      if (!p?.day || !p?.time) {
-        return res.status(400).send({ success: false, message: 'Each plan needs day and time' });
-      }
-    }
-
-    await (prisma as any).$transaction(async (tx: any) => {
-      for (const p of plans) {
-        const existing = await tx.mealPlan.findFirst({ where: { day: p.day, time: p.time } });
-        if (existing) {
-          await tx.mealPlan.update({ where: { id: existing.id }, data: { menu: p.menu || '' } });
-        } else {
-          await tx.mealPlan.create({ data: { day: p.day, time: p.time, menu: p.menu || '' } });
-        }
-      }
-    });
-
-    return res.status(200).send({ success: true, message: 'Meal plans saved' });
-  } catch (error) {
-    console.error('Error bulk saving meal plans:', error);
-    return res.status(500).send({ success: false, message: 'Internal server error' });
-  }
-};

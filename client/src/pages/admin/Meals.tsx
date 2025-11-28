@@ -123,9 +123,6 @@ const Meals: React.FC = () => {
     });
   };
 
-  // Bulk save removed; per-column saving only
-
-  // Fetch existing meal plans from backend and hydrate UI
   useEffect(() => {
     const fetchPlans = async () => {
       try {

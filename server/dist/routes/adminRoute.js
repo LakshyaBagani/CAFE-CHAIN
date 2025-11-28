@@ -44,5 +44,4 @@ router.get("/users/:userId/walletHistory", adminController_1.getUserWalletHistor
 // Meals
 router.post("/meals/set", adminController_1.setMealPlan);
 router.get("/meals", adminController_1.getMealPlans);
-router.post("/meals/set-bulk", adminController_1.bulkSetMealPlans);
 exports.default = router;

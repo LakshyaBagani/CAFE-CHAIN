@@ -107,9 +107,7 @@ export const sendOTP = async (req: Request, res: Response) => {
         .send({ success: false, message: "Email is required" });
     }
 
-    console.time("[OTP] prisma.user.findUnique");
     const existingUser = await prisma.user.findUnique({ where: { email: email } });
-    console.timeEnd("[OTP] prisma.user.findUnique");
 
 
     if (!existingUser) {
@@ -124,9 +122,7 @@ export const sendOTP = async (req: Request, res: Response) => {
 
 
     // Update user with OTP code
-    console.time("[OTP] prisma.user.update(OTPCode)");
     await prisma.user.update({ where: { email: email }, data: { OTPCode: verificationCode } });
-    console.timeEnd("[OTP] prisma.user.update(OTPCode)");
 
     if (!process.env.SENDER_EMAIL || !hasBrevoApiKey) {
       console.error("[OTP] Email configuration missing.", {
@@ -150,9 +146,7 @@ export const sendOTP = async (req: Request, res: Response) => {
     };
 
     try {
-      console.time("[OTP] brevo.sendTransacEmail");
       const response = await brevoClient.sendTransacEmail(sendSmtpEmail);
-      console.timeEnd("[OTP] brevo.sendTransacEmail");
     } catch (e) {
       const err = e as any;
       console.error("[Email] Brevo send failed:", {

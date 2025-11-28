@@ -108,7 +108,6 @@ const Login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 .send({ success: false, message: "Password does not match" });
         }
         yield (0, token_1.default)(user.id, res);
-        console.log("Login successful, JWT cookie set for user:", user.id);
         return res.status(200).send({
             success: true,
             message: "User logged in successfully",
@@ -121,10 +120,8 @@ const Login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
 exports.Login = Login;
 const Logout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        console.log("Logout endpoint hit - clearing cookies");
         res.clearCookie("jwt");
         res.clearCookie("adminSession");
-        console.log("Cookies cleared successfully");
         return res.status(200).send({ success: true, message: "User log out successfully" });
     }
     catch (error) {
@@ -134,19 +131,16 @@ const Logout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
 });
 exports.Logout = Logout;
 const sendOTP = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b, _c;
+    var _a, _b;
     try {
         const { email } = req.body;
         const startTs = Date.now();
-        console.log("[OTP] Request received", { email });
         if (!email) {
             return res
                 .status(400)
                 .send({ success: false, message: "Email is required" });
         }
-        console.time("[OTP] prisma.user.findUnique");
         const existingUser = yield db_1.default.user.findUnique({ where: { email: email } });
-        console.timeEnd("[OTP] prisma.user.findUnique");
         if (!existingUser) {
             return res
                 .status(404)
@@ -154,9 +148,7 @@ const sendOTP = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         }
         const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
         // Update user with OTP code
-        console.time("[OTP] prisma.user.update(OTPCode)");
         yield db_1.default.user.update({ where: { email: email }, data: { OTPCode: verificationCode } });
-        console.timeEnd("[OTP] prisma.user.update(OTPCode)");
         if (!process.env.SENDER_EMAIL || !brevo_1.hasBrevoApiKey) {
             console.error("[OTP] Email configuration missing.", {
                 hasSenderEmail: !!process.env.SENDER_EMAIL,
@@ -168,11 +160,6 @@ const sendOTP = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 .send({ success: false, message: "Email service not configured. Please contact support." });
         }
         const mailOptions = (0, mailOptions_1.default)(email, verificationCode);
-        console.log("[Email] Preparing to send OTP (Brevo):", {
-            to: mailOptions.to,
-            subject: mailOptions.subject,
-            htmlLength: (_a = mailOptions.html) === null || _a === void 0 ? void 0 : _a.length
-        });
         const sendSmtpEmail = {
             sender: { email: process.env.SENDER_EMAIL, name: "Sojo's Cafe" },
             to: [{ email: mailOptions.to }],
@@ -180,22 +167,18 @@ const sendOTP = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             htmlContent: mailOptions.html,
         };
         try {
-            console.time("[OTP] brevo.sendTransacEmail");
             const response = yield brevo_1.default.sendTransacEmail(sendSmtpEmail);
-            console.timeEnd("[OTP] brevo.sendTransacEmail");
-            console.log("[Email] OTP email sent (Brevo)", { to: mailOptions.to, messageId: response === null || response === void 0 ? void 0 : response.messageId });
         }
         catch (e) {
             const err = e;
             console.error("[Email] Brevo send failed:", {
                 message: err === null || err === void 0 ? void 0 : err.message,
                 code: err === null || err === void 0 ? void 0 : err.code,
-                responseData: ((_b = err === null || err === void 0 ? void 0 : err.response) === null || _b === void 0 ? void 0 : _b.body) || ((_c = err === null || err === void 0 ? void 0 : err.response) === null || _c === void 0 ? void 0 : _c.data),
+                responseData: ((_a = err === null || err === void 0 ? void 0 : err.response) === null || _a === void 0 ? void 0 : _a.body) || ((_b = err === null || err === void 0 ? void 0 : err.response) === null || _b === void 0 ? void 0 : _b.data),
                 stack: err === null || err === void 0 ? void 0 : err.stack,
             });
             return res.status(500).send({ success: false, message: "Failed to send OTP. Please try again." });
         }
-        console.log("[OTP] Completed in", Date.now() - startTs, "ms");
         return res
             .status(200)
             .send({ success: true, message: "OTP sent successfully! Check your email." });

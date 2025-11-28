@@ -10,7 +10,8 @@ import {
   LogOut,
   Package,
   Truck,
-  CheckCircle
+  CheckCircle,
+  Lock
 } from 'lucide-react';
 import { Sliders } from 'lucide-react';
 import axios from 'axios';
@@ -26,6 +27,11 @@ const Profile: React.FC = () => {
   const [userInfoError, setUserInfoError] = useState<string | null>(null);
   const [ordersError, setOrdersError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [showChangePwd, setShowChangePwd] = useState(false);
+  const [currPwd, setCurrPwd] = useState('');
+  const [newPwd, setNewPwd] = useState('');
+  const [confirmPwd, setConfirmPwd] = useState('');
+  const [changingPwd, setChangingPwd] = useState(false);
 
   // Helper functions for order status
   const getStatusIcon = (status: string) => {
@@ -386,6 +392,27 @@ const Profile: React.FC = () => {
           )}
         </div>
 
+        {/* Account Actions */}
+        <div className="bg-white/90 backdrop-blur-lg rounded-2xl shadow-xl border border-orange-200 p-6 mb-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-br from-orange-400 to-amber-500 rounded-lg">
+                <Lock className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Security</h3>
+                <p className="text-sm text-gray-600">Manage your account password</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowChangePwd(true)}
+              className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm font-semibold shadow-sm"
+            >
+              Change Password
+            </button>
+          </div>
+        </div>
+
         {/* Order History */}
         <div className="bg-white/90 backdrop-blur-lg rounded-2xl shadow-xl border border-orange-200 p-8 mb-8">
           <div className="flex items-center space-x-4 mb-6">
@@ -548,6 +575,102 @@ const Profile: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Change Password Modal */}
+      {showChangePwd && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Lock className="h-5 w-5 text-amber-600" />
+                <h3 className="text-lg font-bold text-gray-900">Change Password</h3>
+              </div>
+              <button onClick={() => { if (!changingPwd) { setShowChangePwd(false); setCurrPwd(''); setNewPwd(''); setConfirmPwd(''); }}} className="text-gray-500 hover:text-gray-700">✕</button>
+            </div>
+            <div className="px-6 py-5 space-y-4">
+              <div>
+                <label className="block text-sm text-gray-700 mb-1">Current Password</label>
+                <input
+                  type="password"
+                  value={currPwd}
+                  onChange={(e) => setCurrPwd(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
+                  placeholder="Enter current password"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-700 mb-1">New Password</label>
+                <input
+                  type="password"
+                  value={newPwd}
+                  onChange={(e) => setNewPwd(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
+                  placeholder="Enter new password"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-700 mb-1">Confirm New Password</label>
+                <input
+                  type="password"
+                  value={confirmPwd}
+                  onChange={(e) => setConfirmPwd(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
+                  placeholder="Re-enter new password"
+                />
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-end gap-3">
+              <button
+                onClick={() => { if (!changingPwd) { setShowChangePwd(false); setCurrPwd(''); setNewPwd(''); setConfirmPwd(''); }}}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                disabled={changingPwd}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  if (!userInfo?.email) return;
+                  if (!currPwd || !newPwd || !confirmPwd) {
+                    const { showToast } = await import('../utils/toast');
+                    showToast('Please fill all fields', 'warning');
+                    return;
+                  }
+                  if (newPwd !== confirmPwd) {
+                    const { showToast } = await import('../utils/toast');
+                    showToast('New passwords do not match', 'warning');
+                    return;
+                  }
+                  setChangingPwd(true);
+                  try {
+                    const resp = await axios.post('https://cafe-chain.onrender.com/auth/resetPassword', {
+                      email: userInfo.email,
+                      password: currPwd,
+                      newPassword: newPwd,
+                    }, { withCredentials: true });
+                    const { showToast } = await import('../utils/toast');
+                    if (resp.data?.success) {
+                      showToast('Password changed successfully', 'success');
+                      setShowChangePwd(false);
+                      setCurrPwd(''); setNewPwd(''); setConfirmPwd('');
+                    } else {
+                      showToast(resp.data?.message || 'Failed to change password', 'error');
+                    }
+                  } catch (error: any) {
+                    const { showToast } = await import('../utils/toast');
+                    showToast(error.response?.data?.message || error.message || 'Failed to change password', 'error');
+                  } finally {
+                    setChangingPwd(false);
+                  }
+                }}
+                className={`px-4 py-2 rounded-lg text-white ${changingPwd ? 'bg-amber-400 cursor-not-allowed' : 'bg-amber-600 hover:bg-amber-700'} `}
+                disabled={changingPwd}
+              >
+                {changingPwd ? 'Changing...' : 'Change Password'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

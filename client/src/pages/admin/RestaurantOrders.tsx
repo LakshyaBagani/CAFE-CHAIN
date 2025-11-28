@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import RestaurantService, { type Restaurant } from '../../services/restaurantService';
 import { formatDate } from '../../utils/dateUtils';
+import { showToast } from '../../utils/toast';
 import {
   Clock,
   Truck,
@@ -10,6 +11,7 @@ import {
   Search,
   Coffee,
   Utensils,
+  Megaphone,
   X,
   Upload,
   ArrowLeft
@@ -75,6 +77,38 @@ const RestaurantOrders: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [isAddingMenu, setIsAddingMenu] = useState(false);
   const [updatingOrderId, setUpdatingOrderId] = useState<number | null>(null);
+
+  const [showAddOfferModal, setShowAddOfferModal] = useState(false);
+  const [offerMenuName, setOfferMenuName] = useState('');
+  const [offerDiscount, setOfferDiscount] = useState('');
+  const [submittingOffer, setSubmittingOffer] = useState(false);
+
+  const submitOffer = async () => {
+    if (!restaurantId) return;
+    if (!offerMenuName || !offerDiscount) {
+      showToast('Enter menu name and discount', 'warning');
+      return;
+    }
+    try {
+      setSubmittingOffer(true);
+      const resp = await axios.post(`http://localhost:3000/admin/resto/${restaurantId}/runAds`, {
+        menuName: offerMenuName,
+        discount: offerDiscount
+      }, { withCredentials: true });
+      if (resp.data?.success) {
+        showToast('Offer created successfully', 'success');
+        setShowAddOfferModal(false);
+        setOfferMenuName('');
+        setOfferDiscount('');
+      } else {
+        showToast(resp.data?.message || 'Failed to create offer', 'error');
+      }
+    } catch (error: any) {
+      showToast(error.response?.data?.message || error.message || 'Failed to create offer', 'error');
+    } finally {
+      setSubmittingOffer(false);
+    }
+  };
 
   useEffect(() => {
     fetchRestaurantAndOrders();
@@ -359,7 +393,7 @@ const RestaurantOrders: React.FC = () => {
                 <p className="text-gray-600 text-sm md:text-lg">Manage and track all orders for this restaurant</p>
               </div>
             </div>
-            <div className="flex flex-col xs:flex-row items-stretch sm:items-center gap-2 sm:gap-3 sm:justify-end w-full sm:w-auto">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 sm:justify-end w-full sm:w-auto">
               <Link
                 to={`/admin/restaurants/${restaurantId}/menu`}
                 className="flex items-center justify-center gap-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-semibold py-2.5 px-4 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg w-full sm:w-auto"
@@ -375,13 +409,14 @@ const RestaurantOrders: React.FC = () => {
                 <span>Add Menu</span>
               </button>
               <button
-                onClick={() => fetchRestaurantAndOrders()}
-                disabled={loading}
-                className="flex items-center justify-center gap-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 disabled:from-blue-400 disabled:to-blue-500 disabled:cursor-not-allowed text-white font-semibold py-2.5 px-4 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg w-full sm:w-auto"
+                onClick={() => setShowAddOfferModal(true)}
+                disabled={submittingOffer}
+                className="flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 disabled:from-emerald-400 disabled:to-green-500 disabled:cursor-not-allowed text-white font-semibold py-2.5 px-4 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg w-full sm:w-auto"
               >
-                <RefreshCw className={`${loading ? 'animate-spin' : ''} h-4 w-4`} />
-                <span>{loading ? 'Refreshing...' : 'Refresh'}</span>
+                <Megaphone className="h-4 w-4" />
+                <span>{submittingOffer ? 'Submitting...' : 'Add Offer'}</span>
               </button>
+              {/* Top refresh removed; moved to filter row */}
             </div>
           </div>
         </div>
@@ -411,21 +446,74 @@ const RestaurantOrders: React.FC = () => {
               }}
               className="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none bg-gray-50 transition-all duration-200 hover:bg-white"
             />
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none bg-gray-50 transition-all duration-200 hover:bg-white"
+            <button
+              onClick={() => fetchRestaurantAndOrders(selectedDate)}
+              disabled={loading}
+              className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <option value="all">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="preparing">Preparing</option>
-              <option value="prepared">Prepared</option>
-            </select>
+              <RefreshCw className={`${loading ? 'animate-spin' : ''} h-4 w-4`} />
+              <span>{loading ? 'Refreshing...' : 'Refresh'}</span>
+            </button>
           </div>
           <div className="mt-3 text-sm text-gray-600">
             Showing orders for <span className="font-medium">{(() => { const [y,m,d] = selectedDate.split('-'); return `${d}/${m}/${y}`; })()}</span>
           </div>
         </div>
+
+      {/* Add Offer Modal */}
+      {showAddOfferModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Megaphone className="h-5 w-5 text-emerald-600" />
+                <h3 className="text-lg font-bold text-gray-900">Add Offer</h3>
+              </div>
+              <button onClick={() => { if (!submittingOffer) { setShowAddOfferModal(false); setOfferMenuName(''); setOfferDiscount(''); } }} className="text-gray-500 hover:text-gray-700">✕</button>
+            </div>
+            <div className="px-6 py-5 space-y-4">
+              <div>
+                <label className="block text-sm text-gray-700 mb-1">Menu Name</label>
+                <input
+                  type="text"
+                  value={offerMenuName}
+                  onChange={(e) => setOfferMenuName(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none"
+                  placeholder="Exact menu name"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-700 mb-1">Discount (%)</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="100"
+                  value={offerDiscount}
+                  onChange={(e) => setOfferDiscount(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none"
+                  placeholder="e.g. 20"
+                />
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-end gap-3">
+              <button
+                onClick={() => { if (!submittingOffer) { setShowAddOfferModal(false); setOfferMenuName(''); setOfferDiscount(''); } }}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                disabled={submittingOffer}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitOffer}
+                className={`px-4 py-2 rounded-lg text-white ${submittingOffer ? 'bg-emerald-400 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700'}`}
+                disabled={submittingOffer}
+              >
+                {submittingOffer ? 'Submitting...' : 'Submit Offer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Orders List - 3 Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
