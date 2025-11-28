@@ -45,7 +45,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.resetPassword = exports.verifyOTP = exports.sendOTP = exports.Logout = exports.Login = exports.Signup = void 0;
+exports.pixelTraceRegister = exports.resetPassword = exports.verifyOTP = exports.sendOTP = exports.Logout = exports.Login = exports.Signup = void 0;
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const db_1 = __importDefault(require("../config/db"));
 const token_1 = __importDefault(require("../utils/token"));
@@ -246,3 +246,33 @@ const resetPassword = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     }
 });
 exports.resetPassword = resetPassword;
+const pixelTraceRegister = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { name, email, number, college } = req.body;
+        if (!name || !email || !number || !college) {
+            return res.status(400).send({
+                success: false,
+                message: "Missing required fields: name, email, number, and college are required"
+            });
+        }
+        const existingPixelTrace = yield db_1.default.pixelTrace.findFirst({ where: { email } });
+        if (existingPixelTrace) {
+            return res.status(400).send({
+                success: false,
+                message: "Email already registered"
+            });
+        }
+        const pixelTrace = yield db_1.default.pixelTrace.create({
+            data: { name, email, number, college }
+        });
+        return res.status(200).send({ success: true, message: "Registered successfully", pixelTrace });
+    }
+    catch (error) {
+        console.error('Error creating pixelTrace:', error);
+        return res.status(500).send({
+            success: false,
+            message: (error === null || error === void 0 ? void 0 : error.message) || "Internal server error"
+        });
+    }
+});
+exports.pixelTraceRegister = pixelTraceRegister;

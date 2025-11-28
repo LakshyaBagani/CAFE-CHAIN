@@ -55,7 +55,7 @@ const RestaurantOrders: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter] = useState('all');
   const [selectedDate, setSelectedDate] = useState(() => {
     // Get today's date in local timezone, not UTC
     const today = new Date();

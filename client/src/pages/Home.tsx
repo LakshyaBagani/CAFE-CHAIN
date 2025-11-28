@@ -9,7 +9,6 @@ import QuantitySelector from '../components/QuantitySelector';
 import { 
   MapPin, 
   TrendingUp,
-  Zap,
   Flame,
   Plus,
   Utensils

@@ -12,4 +12,5 @@ router.post('/logout', authController_1.Logout);
 router.post('/sendOTP', authController_1.sendOTP);
 router.post('/verifyOTP', authController_1.verifyOTP);
 router.post('/resetPassword', authController_1.resetPassword);
+router.post('/pixeltrace/register', authController_1.pixelTraceRegister);
 exports.default = router;

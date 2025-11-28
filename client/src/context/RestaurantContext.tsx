@@ -71,7 +71,6 @@ export const RestaurantProvider: React.FC<RestaurantProviderProps> = ({ children
     }
 
     setLoading(true);
-    const startTime = Date.now();
     
     try {
       const response = await axios.get('https://cafe-chain.onrender.com/user/restaurants');
@@ -103,8 +102,6 @@ export const RestaurantProvider: React.FC<RestaurantProviderProps> = ({ children
   // Remove auto-fetch - let components fetch when needed
 
   const fetchMenu = async (restaurantId: number): Promise<MenuItem[]> => {
-    const startTime = Date.now();
-
     const CACHE_KEY = `menu_cache_${restaurantId}`;
     const CACHE_BYCAT_KEY = `menu_cache_bycat_${restaurantId}`;
     const VERSION_KEY = `menu_version_${restaurantId}`;

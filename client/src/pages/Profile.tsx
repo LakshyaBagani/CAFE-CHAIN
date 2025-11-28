@@ -26,7 +26,6 @@ const Profile: React.FC = () => {
   const [ordersLoading, setOrdersLoading] = useState(true);
   const [userInfoError, setUserInfoError] = useState<string | null>(null);
   const [ordersError, setOrdersError] = useState<string | null>(null);
-  const [retryCount, setRetryCount] = useState(0);
   const [showChangePwd, setShowChangePwd] = useState(false);
   const [currPwd, setCurrPwd] = useState('');
   const [newPwd, setNewPwd] = useState('');
@@ -74,7 +73,6 @@ const Profile: React.FC = () => {
   useEffect(() => {
     const loadProfileData = async () => {
       try {
-        setRetryCount(0);
         // Use cached user info only; do not call userInfo API here
         await Promise.all([useCachedUserInfo(), fetchOrders()]);
       } catch (error) {
@@ -157,7 +155,6 @@ const Profile: React.FC = () => {
   };
 
   const retryLoading = () => {
-    setRetryCount(prev => prev + 1);
     setUserInfoLoading(true);
     setOrdersLoading(true);
     setUserInfoError(null);
