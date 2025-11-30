@@ -11,7 +11,7 @@ dotenv.config();
 const app = express();
 
 app.use(cors({
-  origin: ["https://cafe-chain.vercel.app" , "http://localhost:5173" , "https://sojo-cafe.vercel.app"],
+  origin: ["https://cafe-chain.vercel.app" , "http://localhost:5173" , "https://sojo-cafe.vercel.app" , "http://localhost:8080"],
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   credentials: true,
 }));

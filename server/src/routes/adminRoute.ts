@@ -39,7 +39,6 @@ router.post("/resto/:restoId/changeStatus", resoStatus);
 router.get("/users", getAllUsers);
 router.post("/users/:userId/addWalletBalance", addUserWalletBalance);
 router.get("/users/:userId/walletHistory", getUserWalletHistory);
-// Meals
 router.post("/meals/set", setMealPlan);
 router.get("/meals", getMealPlans);
 
